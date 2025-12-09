@@ -7,7 +7,8 @@ final ThemeData appTheme = ThemeData(
   // 1. COULEURS PRINCIPALES 
   // La couleur primaire est la couleur la plus proéminente de votre UI.
   primaryColor: AppColors.primaryDark, // #171810 (Noir Profond)
-  
+  fontFamily: 'MuseoModerno',
+
   // La couleur de l'accentuation (boutons, sélections)
   // Utilisation de la couleur accentuée pour les actions importantes.
   colorScheme: ColorScheme.light(
@@ -45,15 +46,32 @@ final ThemeData appTheme = ThemeData(
 
   // Thème du Texte (Lisibilité)
   textTheme: const TextTheme(
-    bodyLarge: TextStyle(color: AppColors.textDark),
-    bodyMedium: TextStyle(color: AppColors.textDark),
-    headlineMedium: TextStyle(color: AppColors.textDark),
-    titleLarge: TextStyle(color: AppColors.textDark),
+    bodyLarge: TextStyle(color: AppColors.textDark, fontFamily: 'MuseoModerno'),
+    bodyMedium: TextStyle(color: AppColors.textDark, fontFamily: 'MuseoModerno'),
+    headlineMedium: TextStyle(color: AppColors.textDark, fontFamily: 'MuseoModerno'),
+    titleLarge: TextStyle(color: AppColors.textDark, fontFamily: 'MuseoModerno'),
     // Le texte par défaut sur fond blanc sera Noir Profond
   ),
   
   // Thème des Icônes
   iconTheme: const IconThemeData(
     color: AppColors.primaryDark, 
+  ),
+
+  // 🔥 CORRECTION : Thème des Champs de Texte (Look moderne/flat)
+  inputDecorationTheme: InputDecorationTheme(
+    // Retirer les bordures par défaut pour un look plus clean
+    border: const UnderlineInputBorder(
+      borderSide: BorderSide(color: AppColors.primaryDark),
+    ),
+    focusedBorder: UnderlineInputBorder( // Bordure quand l'utilisateur tape
+      borderSide: BorderSide(color: AppColors.accentRed, width: 2.0),
+    ),
+    enabledBorder: const UnderlineInputBorder( // Bordure normale
+      borderSide: BorderSide(color: AppColors.primaryDark, width: 1.0),
+    ),
+    labelStyle: TextStyle(color: AppColors.primaryDark.withOpacity(0.7), fontFamily: 'MuseoModerno'),
+    hintStyle: TextStyle(color: AppColors.primaryDark.withOpacity(0.5), fontFamily: 'MuseoModerno'),
+    prefixIconColor: AppColors.primaryDark,
   ),
 );

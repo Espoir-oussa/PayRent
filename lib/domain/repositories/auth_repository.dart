@@ -14,3 +14,11 @@
 //   Future<User> loginWithOtp(String email, String otp);
 //   // ... autres méthodes
 // }
+
+
+import '../../data/models/user_model.dart';
+
+abstract class AuthRepository {
+  Future<UserModel> loginOwner({required String email, required String password});
+  // ... autres méthodes (signup, otp, etc.)
+}

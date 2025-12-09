@@ -1,10 +1,15 @@
-// Fichier : lib/main.dart
+// Fichier : lib/main.dart (Mis à jour)
 
 import 'package:flutter/material.dart';
-import 'config/theme.dart'; // Importez votre fichier de thème
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // NOUVEL IMPORT
+import 'config/theme.dart';
+import 'presentation/proprietaires/pages/auth_screens/owner_login_screen.dart'; // Importez votre écran de login
 
 void main() {
-  runApp(const MyApp());
+  // Le ProviderScope est OBLIGATOIRE pour utiliser Riverpod
+  runApp(const ProviderScope(
+    child: MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -14,17 +19,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Gestion Locative',
-      // Appliquez votre ThemeData ici
-      theme: appTheme, 
-      
-      // Vous pouvez définir les routes ou simplement commencer par l'écran de login
-      initialRoute: '/login_owner', 
+      debugShowCheckedModeBanner: false,
+      theme: appTheme,
+      initialRoute: '/login_owner',
       routes: {
-        // Démarrez avec l'écran d'authentification du Propriétaire
-        '/login_owner': (context) => const OwnerLoginScreen(), 
+        // Assurez-vous d'avoir cet écran
+        '/login_owner': (context) => const OwnerLoginScreen(),
         // ... autres routes
       },
-      // Note: Assurez-vous d'importer OwnerLoginScreen dans le fichier
     );
   }
 }
