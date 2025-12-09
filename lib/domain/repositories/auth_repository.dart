@@ -1,0 +1,16 @@
+
+// ===============================
+// 📄 Contrat Repository : Authentification
+//
+// Ce fichier définit l'interface (contrat) pour l'accès aux données d'authentification.
+//
+// Dossier : lib/domain/repositories/
+// Rôle : Déclaration des méthodes d'accès aux données d'authentification
+// Utilisé par : Use Cases, Data Layer
+// ===============================
+
+// TODO: Définir l'interface AuthRepository
+// abstract class AuthRepository {
+//   Future<User> loginWithOtp(String email, String otp);
+//   // ... autres méthodes
+// }
