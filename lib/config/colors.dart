@@ -7,6 +7,7 @@ class AppColors {
   static const Color primaryDark = Color(0xFF171810); // Noir Profond (Base/Fond)
   static const Color accentRed = Color(0xFF5F2525); // Rouge Foncé (Accent/Action)
   static const Color backgroundLight = Color(0xFFFFFFFF); // Blanc Pur (Arrière-plan, Texte principal)
+  static const Color primaryLight = Color(0xFFF3F4F8); // Gris très clair (pour fonds et cartes)
 
   // Couleurs de Support (déduites et utiles)
   static const Color textLight = backgroundLight; // Texte sur fond sombre (primaire)

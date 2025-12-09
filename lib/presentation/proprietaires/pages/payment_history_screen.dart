@@ -9,7 +9,16 @@
 // Utilisé par : Propriétaires
 // ===============================
 
-// TODO: Implémenter le widget PaymentHistoryScreen
-// class PaymentHistoryScreen extends StatelessWidget {
-//   // ...
-// }
+
+import 'package:flutter/material.dart';
+
+class PaymentHistoryScreen extends StatelessWidget {
+	const PaymentHistoryScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		return Scaffold(
+			body: const Center(child: Text('Écran Historique des Paiements')),
+		);
+	}
+}
