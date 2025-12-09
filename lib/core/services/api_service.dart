@@ -1,4 +1,3 @@
-
 // ===============================
 // 🌐 Service : API (Client HTTP)
 //
@@ -25,16 +24,13 @@
 //   // ... autres méthodes HTTP
 // }
 
-
-
-
 // Fichier : lib/core/services/api_service.dart
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 // REMPLACER CECI par l'URL de base de votre API Backend (ex: Node.js/Express)
-const String _baseUrl = 'https://votre-api.com/api/v1'; 
+const String _baseUrl = 'https://votre-api.com/api/v1';
 
 class ApiService {
   final String? _authToken; // Pour stocker le token JWT après login
@@ -67,13 +63,22 @@ class ApiService {
     );
     return _handleResponse(response);
   }
-  
+
   // Requête PUT (ex: mise à jour du statut de plainte)
   Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/$endpoint'),
       headers: _getHeaders(),
       body: jsonEncode(data),
+    );
+    return _handleResponse(response);
+  }
+
+  // Requête DELETE (ex: suppression d'un bien)
+  Future<dynamic> delete(String endpoint) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/$endpoint'),
+      headers: _getHeaders(),
     );
     return _handleResponse(response);
   }
@@ -85,11 +90,12 @@ class ApiService {
       if (response.body.isNotEmpty) {
         return jsonDecode(response.body);
       }
-      return {}; 
+      return {};
     } else {
       // Pour les erreurs 4xx ou 5xx
       final errorBody = jsonDecode(response.body);
-      throw Exception('Erreur API (${response.statusCode}): ${errorBody['message']}');
+      throw Exception(
+          'Erreur API (${response.statusCode}): ${errorBody['message']}');
     }
   }
 }

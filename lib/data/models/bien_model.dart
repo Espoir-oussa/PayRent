@@ -1,4 +1,3 @@
-
 // ===============================
 // 📦 Modèle de Donnée : Bien
 //
@@ -34,26 +33,26 @@
 //   // Méthodes de sérialisation/désérialisation (fromJson, toJson)
 // }
 
-
-
 // Fichier : lib/data/models/bien_model.dart
 
-class BienModel {
-  final int idBien;
-  final int idProprietaire; // FK vers UTILISATEUR [cite: 30, 48]
-  final String adresseComplete;
-  final String? typeBien; // Ajouté dans le schéma SQL [cite: 50]
-  final double loyerDeBase; // DECIMAL (10, 2) [cite: 51]
-  final double chargesLocatives; // DECIMAL (10, 2) DEFAULT 0.00 [cite: 53]
+import '../../domain/entities/bien_entity.dart';
 
+class BienModel extends BienEntity {
   BienModel({
-    required this.idBien,
-    required this.idProprietaire,
-    required this.adresseComplete,
-    required this.loyerDeBase,
-    this.typeBien,
-    this.chargesLocatives = 0.0,
-  });
+    required int idBien,
+    required int idProprietaire,
+    required String adresseComplete,
+    required double loyerDeBase,
+    String? typeBien,
+    double chargesLocatives = 0.0,
+  }) : super(
+          idBien: idBien,
+          idProprietaire: idProprietaire,
+          adresseComplete: adresseComplete,
+          loyerDeBase: loyerDeBase,
+          typeBien: typeBien,
+          chargesLocatives: chargesLocatives,
+        );
 
   factory BienModel.fromJson(Map<String, dynamic> json) {
     return BienModel(

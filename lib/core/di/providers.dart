@@ -2,9 +2,10 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 import '../../presentation/proprietaires/pages/auth_screens/owner_login_controller.dart';
 import '../../presentation/proprietaires/pages/auth_screens/owner_login_state.dart';
+import '../../presentation/proprietaires/pages/bien_screens/bien_management_controller.dart';
+import '../../presentation/proprietaires/pages/bien_screens/bien_list_state.dart';
 
 // --- Imports des COUCHES ---
 // 1. Core
@@ -13,15 +14,15 @@ import '../services/api_service.dart';
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
 import '../../data/repositories/auth_repository_impl.dart';
-
-
+import '../../data/repositories/bien_repository_impl.dart';
 
 // 3. Domain
 import '../../domain/repositories/plainte_repository.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/repositories/bien_repository.dart';
 import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
-
+import '../../domain/usecases/biens/get_bien_list_usecase.dart';
 
 // =================================================================
 // 1. PROVIDERS DE BASE (CORE)
@@ -47,6 +48,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(ref.watch(apiServiceProvider));
 });
 
+final bienRepositoryProvider = Provider<BienRepository>((ref) {
+  return BienRepositoryImpl(ref.watch(apiServiceProvider));
+});
 
 // =================================================================
 // 3. PROVIDERS DES CAS D'UTILISATION (DOMAIN)
@@ -57,22 +61,32 @@ final updateComplaintStatusUseCaseProvider = Provider((ref) {
   return UpdateComplaintStatusUseCase(ref.watch(plainteRepositoryProvider));
 });
 
-
 // Use Case du Login Propriétaire (dépend d'AuthRepository)
 final ownerLoginUseCaseProvider = Provider((ref) {
   return OwnerLoginUseCase(ref.watch(authRepositoryProvider));
 });
 
+// Use Case : Récupérer les biens d'un propriétaire
+final getBienListUseCaseProvider = Provider((ref) {
+  return GetBienListUseCase(ref.watch(bienRepositoryProvider));
+});
 
 // =================================================================
-// 4. PROVIDERS DE GESTION D'ÉTAT (BLOC/CUBIT/Notifier) - Exemple
+// 4. PROVIDERS DE GESTION D'ÉTAT (BLOC/CUBIT/Notifier)
 // =================================================================
 
-// Ceci est l'étape suivante, où vous connecterez les Use Cases à l'UI
-// Par exemple, pour l'écran de Login :
-
-final ownerLoginControllerProvider = StateNotifierProvider<OwnerLoginController, OwnerLoginState>((ref) {
+// Provider du controller de login propriétaire
+final ownerLoginControllerProvider =
+    StateNotifierProvider<OwnerLoginController, OwnerLoginState>((ref) {
   return OwnerLoginController(
     loginUseCase: ref.watch(ownerLoginUseCaseProvider),
+  );
+});
+
+// Provider du controller pour la gestion des biens
+final bienListControllerProvider =
+    StateNotifierProvider<BienManagementController, BienListState>((ref) {
+  return BienManagementController(
+    getBienListUseCase: ref.watch(getBienListUseCaseProvider),
   );
 });
