@@ -9,7 +9,16 @@
 // Utilisé par : Propriétaires
 // ===============================
 
-// TODO: Implémenter le widget BienManagementScreen
-// class BienManagementScreen extends StatelessWidget {
-//   // ...
-// }
+
+import 'package:flutter/material.dart';
+
+class BienManagementScreen extends StatelessWidget {
+	const BienManagementScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		return Scaffold(
+			body: const Center(child: Text('Écran Gestion des Biens')),
+		);
+	}
+}

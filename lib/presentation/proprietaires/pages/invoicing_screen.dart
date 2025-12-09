@@ -9,7 +9,16 @@
 // Utilisé par : Propriétaires
 // ===============================
 
-// TODO: Implémenter le widget InvoicingScreen
-// class InvoicingScreen extends StatelessWidget {
-//   // ...
-// }
+
+import 'package:flutter/material.dart';
+
+class InvoicingScreen extends StatelessWidget {
+	const InvoicingScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		return Scaffold(
+			body: const Center(child: Text('Écran Facturation')),
+		);
+	}
+}

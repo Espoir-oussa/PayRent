@@ -9,7 +9,16 @@
 // Utilisé par : Propriétaires
 // ===============================
 
-// TODO: Implémenter le widget ComplaintTrackingScreen
-// class ComplaintTrackingScreen extends StatelessWidget {
-//   // ...
-// }
+
+import 'package:flutter/material.dart';
+
+class ComplaintTrackingScreen extends StatelessWidget {
+	const ComplaintTrackingScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		return Scaffold(
+			body: const Center(child: Text('Écran Suivi des Plaintes')),
+		);
+	}
+}

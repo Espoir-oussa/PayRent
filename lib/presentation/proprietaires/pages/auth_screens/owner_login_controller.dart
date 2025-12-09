@@ -15,6 +15,15 @@ class OwnerLoginController extends StateNotifier<OwnerLoginState> {
     // 1. Début du chargement
     state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
 
+    // Simulation de succès sans appel API
+    await Future.delayed(const Duration(seconds: 1)); // Simule un délai réseau
+    state = state.copyWith(
+      status: AuthStatus.success,
+      authToken: 'token_fictif_123', // Token simulé
+    );
+
+    // --- Ancien code API commenté ---
+    /*
     try {
       // 2. Exécution du cas d'utilisation (appel API)
       final userEntity = await loginUseCase(email: email, password: password);
@@ -33,6 +42,7 @@ class OwnerLoginController extends StateNotifier<OwnerLoginState> {
         errorMessage: 'Erreur de connexion: Mot de passe ou email incorrect.',
       );
     }
+    */
   }
   
   // Méthode pour réinitialiser l'état (utile après une déconnexion)
