@@ -5,6 +5,20 @@ allprojects {
     }
 }
 
+// Fix pour app_links et autres plugins qui utilisent flutter.ndkVersion
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace = project.group.toString()
+                }
+                compileSdkVersion 34
+            }
+        }
+    }
+}
+
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
