@@ -16,6 +16,8 @@ import '../../../domain/entities/bien_entity.dart';
 import '../widgets/bien_card.dart';
 import '../../../presentation/proprietaires/widgets/empty_state_widget.dart';
 import 'bien_screens/bien_list_state.dart';
+import 'bien_screens/add_bien_screen.dart';
+import 'bien_screens/edit_bien_screen.dart';
 
 class BienManagementScreen extends ConsumerStatefulWidget {
   const BienManagementScreen({super.key});
@@ -54,11 +56,20 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
       ),
       body: _buildBody(bienListState),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Naviguer vers l'écran d'ajout de bien
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ajouter un bien - À implémenter')),
+        onPressed: () async {
+          // Naviguer vers l'écran d'ajout de bien
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddBienScreen(
+                  idProprietaire: 1), // TODO: Remplacer par l'ID réel
+            ),
           );
+
+          // Si le bien a été créé avec succès, recharger la liste
+          if (result == true) {
+            _loadBiens();
+          }
         },
         backgroundColor: AppColors.accentRed,
         tooltip: 'Ajouter un bien',
@@ -189,11 +200,19 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     );
   }
 
-  void _editBien(BienEntity bien) {
-    // TODO: Naviguer vers l'écran d'édition du bien
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Éditer le bien - À implémenter')),
+  void _editBien(BienEntity bien) async {
+    // Naviguer vers l'écran d'édition du bien
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditBienScreen(bien: bien),
+      ),
     );
+
+    // Si le bien a été modifié avec succès, recharger la liste
+    if (result == true) {
+      _loadBiens();
+    }
   }
 
   void _confirmDeleteBien(BienEntity bien) {
@@ -210,12 +229,37 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
             child: const Text('Annuler'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // TODO: Appeler le Use Case de suppression
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Suppression - À implémenter')),
-              );
+
+              try {
+                // Appeler le Use Case de suppression
+                final deleteUseCase = ref.read(deleteBienUseCaseProvider);
+                await deleteUseCase.call(idBien: bien.idBien);
+
+                // Afficher un message de succès
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Bien supprimé avec succès !'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+
+                  // Recharger la liste
+                  _loadBiens();
+                }
+              } catch (e) {
+                // Afficher un message d'erreur
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Erreur: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),

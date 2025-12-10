@@ -54,6 +54,23 @@ class BienRepositoryImpl implements BienRepository {
   @override
   Future<BienEntity> createBien(BienEntity bien) async {
     try {
+      // DÉVELOPPEMENT : Simuler la création
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Créer un nouveau bien avec un ID généré
+      final nouveauBien = BienModel(
+        idBien: DateTime.now().millisecondsSinceEpoch, // ID temporaire
+        idProprietaire: bien.idProprietaire,
+        adresseComplete: bien.adresseComplete,
+        loyerDeBase: bien.loyerDeBase,
+        typeBien: bien.typeBien,
+        chargesLocatives: bien.chargesLocatives,
+      );
+
+      return nouveauBien;
+
+      // PRODUCTION : Décommenter l'appel API réel
+      /*
       final bienModel = BienModel(
         idBien: bien.idBien,
         idProprietaire: bien.idProprietaire,
@@ -65,6 +82,7 @@ class BienRepositoryImpl implements BienRepository {
 
       final response = await apiService.post('biens', bienModel.toJson());
       return BienModel.fromJson(response as Map<String, dynamic>);
+      */
     } catch (e) {
       throw Exception('Erreur lors de la création du bien: $e');
     }
@@ -73,6 +91,23 @@ class BienRepositoryImpl implements BienRepository {
   @override
   Future<BienEntity> updateBien(BienEntity bien) async {
     try {
+      // DÉVELOPPEMENT : Simuler la mise à jour
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Retourner le bien modifié
+      final bienModifie = BienModel(
+        idBien: bien.idBien,
+        idProprietaire: bien.idProprietaire,
+        adresseComplete: bien.adresseComplete,
+        loyerDeBase: bien.loyerDeBase,
+        typeBien: bien.typeBien,
+        chargesLocatives: bien.chargesLocatives,
+      );
+
+      return bienModifie;
+
+      // PRODUCTION : Décommenter l'appel API réel
+      /*
       final bienModel = BienModel(
         idBien: bien.idBien,
         idProprietaire: bien.idProprietaire,
@@ -85,6 +120,7 @@ class BienRepositoryImpl implements BienRepository {
       final response =
           await apiService.put('biens/${bien.idBien}', bienModel.toJson());
       return BienModel.fromJson(response as Map<String, dynamic>);
+      */
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour du bien: $e');
     }
@@ -93,7 +129,16 @@ class BienRepositoryImpl implements BienRepository {
   @override
   Future<void> deleteBien(int idBien) async {
     try {
+      // DÉVELOPPEMENT : Simuler la suppression
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // En mode mock, on simule simplement le succès
+      // La vraie suppression se fera dans la liste en mémoire
+
+      // PRODUCTION : Décommenter l'appel API réel
+      /*
       await apiService.delete('biens/$idBien');
+      */
     } catch (e) {
       throw Exception('Erreur lors de la suppression du bien: $e');
     }

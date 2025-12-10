@@ -23,6 +23,9 @@ import '../../domain/repositories/bien_repository.dart';
 import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
 import '../../domain/usecases/biens/get_bien_list_usecase.dart';
+import '../../domain/usecases/biens/create_bien_usecase.dart';
+import '../../domain/usecases/biens/update_bien_usecase.dart';
+import '../../domain/usecases/biens/delete_bien_usecase.dart';
 
 // =================================================================
 // 1. PROVIDERS DE BASE (CORE)
@@ -69,6 +72,21 @@ final ownerLoginUseCaseProvider = Provider((ref) {
 // Use Case : Récupérer les biens d'un propriétaire
 final getBienListUseCaseProvider = Provider((ref) {
   return GetBienListUseCase(ref.watch(bienRepositoryProvider));
+});
+
+// Use Case : Créer un nouveau bien
+final createBienUseCaseProvider = Provider((ref) {
+  return CreateBienUseCase(ref.watch(bienRepositoryProvider));
+});
+
+// Use Case : Modifier un bien existant
+final updateBienUseCaseProvider = Provider((ref) {
+  return UpdateBienUseCase(ref.watch(bienRepositoryProvider));
+});
+
+// Use Case : Supprimer un bien
+final deleteBienUseCaseProvider = Provider((ref) {
+  return DeleteBienUseCase(ref.watch(bienRepositoryProvider));
 });
 
 // =================================================================
