@@ -18,7 +18,7 @@ class OwnerLoginController extends StateNotifier<OwnerLoginState> {
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.failure,
-        errorMessage: 'Erreur de connexion: Mot de passe ou email incorrect.',
+        errorMessage: e.toString(),
       );
     }
   }

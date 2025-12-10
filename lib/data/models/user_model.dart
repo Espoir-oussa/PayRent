@@ -58,7 +58,7 @@ class UserModel extends UserEntity {
     final data = doc.data;
     return UserModel(
       idUtilisateur: 0, // L'ID numérique n'est pas utilisé avec Appwrite
-      typeRole: data['type_role'] ?? 'proprietaire',
+      typeRole: data['role'] ?? 'proprietaire',
       email: data['email'] ?? '',
       nom: data['nom'] ?? '',
       prenom: data['prenom'] ?? '',
@@ -79,11 +79,15 @@ class UserModel extends UserEntity {
   /// Convertir en Map pour Appwrite
   Map<String, dynamic> toAppwrite() {
     return {
-      'type_role': typeRole,
+      'role': typeRole,
       'email': email,
       'nom': nom,
       'prenom': prenom,
-      'telephone': telephone,
+      'telephone': telephone ?? '',
+      'adresse': '',
+      'photoUrl': '',
+      'createdAt': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
     };
   }
 }
