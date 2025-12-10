@@ -8,16 +8,16 @@ class OwnerLoginController extends StateNotifier<OwnerLoginState> {
   OwnerLoginController({required this.loginUseCase}) : super(OwnerLoginState());
 
   Future<void> login({required String email, required String password}) async {
-    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    state = state.copyWith(status: LoginStatus.loading, errorMessage: null);
     try {
       final userModel = await loginUseCase(email: email, password: password);
       state = state.copyWith(
-        status: AuthStatus.success,
+        status: LoginStatus.success,
         authToken: userModel.token,
       );
     } catch (e) {
       state = state.copyWith(
-        status: AuthStatus.failure,
+        status: LoginStatus.failure,
         errorMessage: e.toString(),
       );
     }
