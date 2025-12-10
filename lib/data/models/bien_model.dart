@@ -45,6 +45,7 @@ class BienModel {
   final String? typeBien; // Ajouté dans le schéma SQL [cite: 50]
   final double loyerDeBase; // DECIMAL (10, 2) [cite: 51]
   final double chargesLocatives; // DECIMAL (10, 2) DEFAULT 0.00 [cite: 53]
+  final String? imagePath; // Chemin ou URL de l'image du bien
 
   BienModel({
     required this.idBien,
@@ -53,6 +54,7 @@ class BienModel {
     required this.loyerDeBase,
     this.typeBien,
     this.chargesLocatives = 0.0,
+    this.imagePath,
   });
 
   factory BienModel.fromJson(Map<String, dynamic> json) {
@@ -61,9 +63,9 @@ class BienModel {
       idProprietaire: json['id_proprietaire'],
       adresseComplete: json['adresse_complete'],
       typeBien: json['type_bien'],
-      // Conversion des types numériques (peut être String ou int/double en JSON)
       loyerDeBase: (json['loyer_de_base'] as num).toDouble(),
       chargesLocatives: (json['charges_locatives'] as num).toDouble(),
+      imagePath: json['image_path'],
     );
   }
 
@@ -74,6 +76,7 @@ class BienModel {
       'type_bien': typeBien,
       'loyer_de_base': loyerDeBase,
       'charges_locatives': chargesLocatives,
+      'image_path': imagePath,
     };
   }
 }
