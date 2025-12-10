@@ -19,6 +19,13 @@ class AuthRepositoryAppwrite implements AuthRepository {
     required String password,
   }) async {
     try {
+      // 0. Fermer toute session existante avant de se connecter
+      try {
+        await _appwriteService.logout();
+      } catch (_) {
+        // Ignorer l'erreur si pas de session active
+      }
+
       // 1. Créer une session avec Appwrite Account
       await _appwriteService.login(email: email, password: password);
 
@@ -55,6 +62,13 @@ class AuthRepositoryAppwrite implements AuthRepository {
     String? telephone,
   }) async {
     try {
+      // 0. Fermer toute session existante avant l'inscription
+      try {
+        await _appwriteService.logout();
+      } catch (_) {
+        // Ignorer l'erreur si pas de session active
+      }
+
       // 1. Créer le compte Appwrite
       final user = await _appwriteService.createAccount(
         email: email,
@@ -73,9 +87,12 @@ class AuthRepositoryAppwrite implements AuthRepository {
           'email': email,
           'nom': nom,
           'prenom': prenom,
-          'telephone': telephone,
-          'type_role': 'proprietaire',
-          'date_creation': DateTime.now().toIso8601String(),
+          'telephone': telephone ?? '',
+          'role': 'proprietaire',
+          'adresse': '',
+          'photoUrl': '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
         },
         permissions: [
           Permission.read(Role.user(user.$id)),
