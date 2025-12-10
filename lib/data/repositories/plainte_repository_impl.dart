@@ -113,13 +113,10 @@ class PlainteRepositoryImpl implements PlainteRepository {
   }
 
   @override
-  Future<void> updateComplaintStatus({
-    required int plainteId,
-    required String newStatus,
-  }) async {
+  Future<void> updateComplaintStatus(int complaintId, String newStatus) async {
     // Logique d'appel API réelle : envoi de la mise à jour via PUT
     // await apiService.put(
-    //   'plaintes/$plainteId/status',
+    //   'plaintes/$complaintId/status',
     //   {
     //     'statut_plainte': newStatus,
     //   },
@@ -128,17 +125,6 @@ class PlainteRepositoryImpl implements PlainteRepository {
     // Simulation de mise à jour pour les tests
     await Future.delayed(const Duration(milliseconds: 800));
     // Dans un vrai système, l'API mettrait à jour la base de données
-    print('Plainte #$plainteId mise à jour avec le statut: $newStatus');
-  }
-
-  @override
-  Future<PlainteModel> createComplaint({
-    required int locataireId,
-    required String sujet,
-    required String description,
-    required int bienId,
-  }) {
-    // Cette méthode est pour la phase 2 (Locataire)
-    throw UnimplementedError('createComplaint() n\'est pas encore implémenté.');
+    print('Plainte #$complaintId mise à jour avec le statut: $newStatus');
   }
 }

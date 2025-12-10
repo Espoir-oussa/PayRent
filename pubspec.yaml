@@ -38,6 +38,7 @@ dependencies:
   flutter_riverpod: ^2.5.1  # Version stable actuelle
   http: ^1.2.0
   intl: ^0.19.0
+  image_picker: ^1.0.4
 
 dev_dependencies:
   flutter_test:

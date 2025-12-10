@@ -51,10 +51,7 @@ class ComplaintTrackingController
     state = state.copyWith(isUpdating: true);
 
     try {
-      await updateStatusUseCase(
-        plainteId: plainteId,
-        newStatus: newStatus,
-      );
+      await updateStatusUseCase(plainteId, newStatus);
 
       // Met à jour localement la plainte pour retour immédiat
       final updatedComplaints = state.complaints

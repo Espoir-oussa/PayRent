@@ -105,10 +105,14 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                     ),
                     const Spacer(),
                     // Logo PayRent (optionnel)
-                    Image.asset(
-                      'assets/images/payrent_blanc.png',
-                      height: 100,
-                      color: AppColors.primaryDark,
+                    Text(
+                      'PayRent',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryDark,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ],
                 ),
