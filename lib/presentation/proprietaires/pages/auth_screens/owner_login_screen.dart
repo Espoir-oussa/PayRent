@@ -35,12 +35,12 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
 
     // Écouter les changements d'état
     ref.listen<OwnerLoginState>(ownerLoginControllerProvider, (previous, next) {
-      if (next.status == AuthStatus.success) {
+      if (next.status == LoginStatus.success) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const HomeOwnerScreen()),
           );
       }
-      if (next.status == AuthStatus.failure) {
+      if (next.status == LoginStatus.failure) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur: ${next.errorMessage ?? "Vérifiez vos identifiants"}'),
@@ -52,7 +52,7 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
 
     // Fonction de soumission
     void handleLogin() {
-      if (loginState.status != AuthStatus.loading) {
+      if (loginState.status != LoginStatus.loading) {
         ref.read(ownerLoginControllerProvider.notifier).login(
           email: _emailController.text.trim(),
           password: _passwordController.text,
@@ -153,9 +153,9 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
               SizedBox(
                 height: 52, // Slightly taller button for better touch target
                 child: ElevatedButton(
-                  onPressed: loginState.status == AuthStatus.loading ? null : handleLogin,
+                  onPressed: loginState.status == LoginStatus.loading ? null : handleLogin,
                   style: Theme.of(context).elevatedButtonTheme.style,
-                  child: loginState.status == AuthStatus.loading
+                  child: loginState.status == LoginStatus.loading
                       ? const SizedBox(
                           height: 20,
                           width: 20,

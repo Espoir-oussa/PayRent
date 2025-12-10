@@ -1,7 +1,6 @@
 // Widgets de dialogues réutilisables
 import 'package:flutter/material.dart';
 import '../../../config/colors.dart';
-import 'app_button.dart';
 
 /// Affiche un dialogue de confirmation
 Future<bool?> showAppConfirmDialog(
