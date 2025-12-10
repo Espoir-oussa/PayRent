@@ -2,7 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'owner_login_state.dart'; 
+// Import supprimé car inutilisé
+import '../../states/owner_login_state.dart'; 
 import '../../../../config/colors.dart';
 import '../../../../core/di/providers.dart';
 import '../home_owner_screen.dart'; 

@@ -1,4 +1,3 @@
-
 // ===============================
 // 📄 Contrat Repository : Bien
 //
@@ -9,8 +8,29 @@
 // Utilisé par : Use Cases, Data Layer
 // ===============================
 
-// TODO: Définir l'interface BienRepository
-// abstract class BienRepository {
-//   Future<List<Bien>> getBiens();
-//   // ... autres méthodes
-// }
+import '../../data/models/bien_model.dart';
+
+abstract class BienRepository {
+  /// Récupérer tous les biens d'un propriétaire
+  Future<List<BienModel>> getBiensByProprietaire(String proprietaireId);
+  
+  /// Récupérer un bien par son ID
+  Future<BienModel> getBienById(String bienId);
+  
+  /// Créer un nouveau bien
+  Future<BienModel> createBien(BienModel bien);
+  
+  /// Mettre à jour un bien
+  Future<BienModel> updateBien(String bienId, BienModel bien);
+  
+  /// Supprimer un bien
+  Future<void> deleteBien(String bienId);
+  
+  /// Rechercher des biens par critères
+  Future<List<BienModel>> searchBiens({
+    String? typeBien,
+    double? loyerMin,
+    double? loyerMax,
+    String? adresse,
+  });
+}

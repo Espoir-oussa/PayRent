@@ -1,4 +1,4 @@
-// Fichier : lib/presentation/proprietaires/pages/auth_screens/owner_login_state.dart
+// Fichier : lib/presentation/proprietaires/states/owner_login_state.dart
 
 enum AuthStatus { initial, loading, success, failure }
 

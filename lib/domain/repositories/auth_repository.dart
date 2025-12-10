@@ -1,4 +1,3 @@
-
 // ===============================
 // 📄 Contrat Repository : Authentification
 //
@@ -20,5 +19,13 @@ import '../../data/models/user_model.dart';
 
 abstract class AuthRepository {
   Future<UserModel> loginOwner({required String email, required String password});
+  Future<void> ownerLogout();
+  Future<UserModel> registerOwner({
+    required String email,
+    required String password,
+    required String nom,
+    required String prenom,
+    String? telephone,
+  });
   // ... autres méthodes (signup, otp, etc.)
 }

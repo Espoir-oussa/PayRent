@@ -1,11 +1,17 @@
-// Fichier : lib/main.dart (Mis à jour)
+// Fichier : lib/main.dart (Mis à jour avec Appwrite)
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // NOUVEL IMPORT
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/theme.dart';
-import 'presentation/proprietaires/pages/auth_screens/owner_login_screen.dart'; // Importez votre écran de login
+import 'core/services/appwrite_service.dart';
+import 'presentation/proprietaires/pages/auth_screens/owner_login_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialiser Appwrite avant de lancer l'app
+  AppwriteService().init();
+  
   // Le ProviderScope est OBLIGATOIRE pour utiliser Riverpod
   runApp(const ProviderScope(
     child: MyApp(),

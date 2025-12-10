@@ -7,6 +7,7 @@ class UserEntity {
   final String nom;
   final String prenom;
   final String? telephone;
+  final String? token; // Ajout du token
 
   const UserEntity({
     required this.idUtilisateur,
@@ -15,5 +16,6 @@ class UserEntity {
     required this.nom,
     required this.prenom,
     this.telephone,
+    this.token,
   });
 }
