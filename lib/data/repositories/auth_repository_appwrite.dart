@@ -2,7 +2,6 @@
 // Implémentation du repository d'authentification utilisant Appwrite
 
 import 'package:appwrite/appwrite.dart';
-import 'package:appwrite/models.dart' as models;
 import '../../core/services/appwrite_service.dart';
 import '../../config/environment.dart';
 import '../../domain/repositories/auth_repository.dart';
