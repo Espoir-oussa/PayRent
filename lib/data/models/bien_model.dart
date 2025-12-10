@@ -1,4 +1,3 @@
-
 // ===============================
 // 📦 Modèle de Donnée : Bien
 //
@@ -13,41 +12,21 @@
 // Utilisé par : Repositories, Use Cases, Présentation
 // ===============================
 
-// TODO: Définir la classe BienModel selon le MLD (Modèle Logique de Données)
-// Exemple de structure possible :
-// class BienModel {
-//   final String id;
-//   final String nom;
-//   final String adresse;
-//   final String type;
-//   final int nombrePieces;
-//   // ... autres champs selon vos besoins
-//
-//   BienModel({
-//     required this.id,
-//     required this.nom,
-//     required this.adresse,
-//     required this.type,
-//     required this.nombrePieces,
-//   });
-//
-//   // Méthodes de sérialisation/désérialisation (fromJson, toJson)
-// }
-
-
-
-// Fichier : lib/data/models/bien_model.dart
+import 'package:appwrite/models.dart' as models;
 
 class BienModel {
+  final String? appwriteId; // ID Appwrite du document
   final int idBien;
-  final int idProprietaire; // FK vers UTILISATEUR [cite: 30, 48]
+  final String idProprietaire; // ID Appwrite du propriétaire
   final String adresseComplete;
-  final String? typeBien; // Ajouté dans le schéma SQL [cite: 50]
-  final double loyerDeBase; // DECIMAL (10, 2) [cite: 51]
-  final double chargesLocatives; // DECIMAL (10, 2) DEFAULT 0.00 [cite: 53]
+  final String? typeBien;
+  final double loyerDeBase;
+  final double chargesLocatives;
   final String? imagePath; // Chemin ou URL de l'image du bien
+  final DateTime? dateCreation;
 
   BienModel({
+    this.appwriteId,
     required this.idBien,
     required this.idProprietaire,
     required this.adresseComplete,
@@ -55,17 +34,36 @@ class BienModel {
     this.typeBien,
     this.chargesLocatives = 0.0,
     this.imagePath,
+    this.dateCreation,
   });
 
   factory BienModel.fromJson(Map<String, dynamic> json) {
     return BienModel(
       idBien: json['id_bien'],
-      idProprietaire: json['id_proprietaire'],
+      idProprietaire: json['id_proprietaire'].toString(),
       adresseComplete: json['adresse_complete'],
       typeBien: json['type_bien'],
       loyerDeBase: (json['loyer_de_base'] as num).toDouble(),
-      chargesLocatives: (json['charges_locatives'] as num).toDouble(),
+      chargesLocatives: (json['charges_locatives'] as num?)?.toDouble() ?? 0.0,
       imagePath: json['image_path'],
+    );
+  }
+
+  /// Factory pour créer un BienModel depuis un document Appwrite
+  factory BienModel.fromAppwrite(models.Document doc) {
+    final data = doc.data;
+    return BienModel(
+      appwriteId: doc.$id,
+      idBien: 0, // L'ID numérique n'est pas utilisé avec Appwrite
+      idProprietaire: data['id_proprietaire'] ?? '',
+      adresseComplete: data['adresse_complete'] ?? '',
+      typeBien: data['type_bien'],
+      loyerDeBase: (data['loyer_de_base'] as num?)?.toDouble() ?? 0.0,
+      chargesLocatives: (data['charges_locatives'] as num?)?.toDouble() ?? 0.0,
+      imagePath: data['image_path'],
+      dateCreation: data['date_creation'] != null 
+          ? DateTime.parse(data['date_creation']) 
+          : null,
     );
   }
 
@@ -78,5 +76,43 @@ class BienModel {
       'charges_locatives': chargesLocatives,
       'image_path': imagePath,
     };
+  }
+
+  /// Convertir en Map pour Appwrite
+  Map<String, dynamic> toAppwrite() {
+    return {
+      'id_proprietaire': idProprietaire,
+      'adresse_complete': adresseComplete,
+      'type_bien': typeBien,
+      'loyer_de_base': loyerDeBase,
+      'charges_locatives': chargesLocatives,
+      'image_path': imagePath,
+      'date_creation': dateCreation?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    };
+  }
+
+  /// Créer une copie avec des modifications
+  BienModel copyWith({
+    String? appwriteId,
+    int? idBien,
+    String? idProprietaire,
+    String? adresseComplete,
+    String? typeBien,
+    double? loyerDeBase,
+    double? chargesLocatives,
+    String? imagePath,
+    DateTime? dateCreation,
+  }) {
+    return BienModel(
+      appwriteId: appwriteId ?? this.appwriteId,
+      idBien: idBien ?? this.idBien,
+      idProprietaire: idProprietaire ?? this.idProprietaire,
+      adresseComplete: adresseComplete ?? this.adresseComplete,
+      typeBien: typeBien ?? this.typeBien,
+      loyerDeBase: loyerDeBase ?? this.loyerDeBase,
+      chargesLocatives: chargesLocatives ?? this.chargesLocatives,
+      imagePath: imagePath ?? this.imagePath,
+      dateCreation: dateCreation ?? this.dateCreation,
+    );
   }
 }
