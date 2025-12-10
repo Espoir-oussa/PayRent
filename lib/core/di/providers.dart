@@ -11,6 +11,7 @@ import '../../presentation/proprietaires/states/owner_register_state.dart';
 // 1. Core
 import '../services/api_service.dart';
 import '../services/appwrite_service.dart';
+import '../services/image_upload_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -46,6 +47,11 @@ final apiServiceProvider = Provider((ref) {
 // Provider du service Appwrite
 final appwriteServiceProvider = Provider((ref) {
   return AppwriteService();
+});
+
+// Provider du service d'upload d'images
+final imageUploadServiceProvider = Provider((ref) {
+  return ImageUploadService(ref.watch(appwriteServiceProvider));
 });
 
 // =================================================================

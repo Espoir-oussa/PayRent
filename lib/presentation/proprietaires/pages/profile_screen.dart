@@ -275,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() => _isUploadingImage = true);
 
-      // Uploader l'image vers Appwrite Storage
+      // Uploader l'image vers Appwrite Storage avec les permissions
       final storage = Storage(_appwriteService.client);
       final file = await storage.createFile(
         bucketId: Environment.imagesBucketId,
@@ -285,6 +285,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           filename:
               'profile_${_userId ?? 'user'}_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
+        permissions: [
+          Permission.read(Role.any()), // Lecture publique pour afficher l'image
+          Permission.update(Role.user(_userId!)),
+          Permission.delete(Role.user(_userId!)),
+        ],
       );
 
       // Construire l'URL de l'image
