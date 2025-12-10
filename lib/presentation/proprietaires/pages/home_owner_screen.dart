@@ -45,8 +45,8 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
   final List<String> _bottomLabels = [
     'Biens',
     'Plaintes',
-    'Paiements',
-    'Factures',
+    'Pay.',
+    'Fact.',
   ];
 
   @override
@@ -233,12 +233,12 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         unselectedItemColor: Colors.grey.shade600,
         elevation: 0,
         selectedLabelStyle: const TextStyle(
-          fontSize: 13,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           fontFamily: 'MuseoModerno',
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           fontFamily: 'MuseoModerno',
         ),
         items: List.generate(_bottomIcons.length, (index) {
