@@ -18,8 +18,8 @@ class BienRepositoryAppwrite implements BienRepository {
       final result = await _appwriteService.listDocuments(
         collectionId: Environment.biensCollectionId,
         queries: [
-          Query.equal('id_proprietaire', proprietaireId),
-          Query.orderDesc('date_creation'),
+          Query.equal('proprietaireId', proprietaireId),
+          Query.orderDesc('createdAt'),
         ],
       );
 
@@ -106,16 +106,16 @@ class BienRepositoryAppwrite implements BienRepository {
       final queries = <String>[];
 
       if (typeBien != null && typeBien.isNotEmpty) {
-        queries.add(Query.equal('type_bien', typeBien));
+        queries.add(Query.equal('type', typeBien));
       }
       if (loyerMin != null) {
-        queries.add(Query.greaterThanEqual('loyer_de_base', loyerMin));
+        queries.add(Query.greaterThanEqual('loyerMensuel', loyerMin));
       }
       if (loyerMax != null) {
-        queries.add(Query.lessThanEqual('loyer_de_base', loyerMax));
+        queries.add(Query.lessThanEqual('loyerMensuel', loyerMax));
       }
       if (adresse != null && adresse.isNotEmpty) {
-        queries.add(Query.search('adresse_complete', adresse));
+        queries.add(Query.search('adresse', adresse));
       }
 
       final result = await _appwriteService.listDocuments(

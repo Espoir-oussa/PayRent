@@ -2,7 +2,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
 import '../../presentation/proprietaires/controllers/owner_login_controller.dart';
 import '../../presentation/proprietaires/states/owner_login_state.dart';
 import '../../presentation/proprietaires/controllers/owner_register_controller.dart';
@@ -12,6 +11,7 @@ import '../../presentation/proprietaires/states/owner_register_state.dart';
 // 1. Core
 import '../services/api_service.dart';
 import '../services/appwrite_service.dart';
+import '../services/image_upload_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -22,6 +22,7 @@ import '../../data/repositories/contrat_repository_appwrite.dart';
 import '../../data/repositories/paiement_repository_appwrite.dart';
 import '../../data/repositories/plainte_repository_appwrite.dart';
 import '../../data/repositories/facture_repository_appwrite.dart';
+import '../../data/models/bien_model.dart';
 
 // 3. Domain
 import '../../domain/repositories/plainte_repository.dart';
@@ -46,6 +47,11 @@ final apiServiceProvider = Provider((ref) {
 // Provider du service Appwrite
 final appwriteServiceProvider = Provider((ref) {
   return AppwriteService();
+});
+
+// Provider du service d'upload d'images
+final imageUploadServiceProvider = Provider((ref) {
+  return ImageUploadService(ref.watch(appwriteServiceProvider));
 });
 
 // =================================================================
@@ -101,7 +107,6 @@ final updateComplaintStatusUseCaseProvider = Provider((ref) {
   return UpdateComplaintStatusUseCase(ref.watch(plainteRepositoryProvider));
 });
 
-
 // Use Case du Login Propriétaire (dépend d'AuthRepository)
 final ownerLoginUseCaseProvider = Provider((ref) {
   return OwnerLoginUseCase(ref.watch(authRepositoryProvider));
@@ -115,14 +120,37 @@ final ownerRegisterUseCaseProvider = Provider((ref) {
 // 4. PROVIDERS DE GESTION D'ÉTAT (BLOC/CUBIT/Notifier)
 // =================================================================
 
-final ownerLoginControllerProvider = StateNotifierProvider<OwnerLoginController, OwnerLoginState>((ref) {
+final ownerLoginControllerProvider =
+    StateNotifierProvider<OwnerLoginController, OwnerLoginState>((ref) {
   return OwnerLoginController(
     loginUseCase: ref.watch(ownerLoginUseCaseProvider),
   );
 });
 
-final ownerRegisterControllerProvider = StateNotifierProvider<OwnerRegisterController, OwnerRegisterState>((ref) {
+final ownerRegisterControllerProvider =
+    StateNotifierProvider<OwnerRegisterController, OwnerRegisterState>((ref) {
   return OwnerRegisterController(
     registerUseCase: ref.watch(ownerRegisterUseCaseProvider),
   );
+});
+
+// =================================================================
+// 5. PROVIDERS POUR LES BIENS
+// =================================================================
+
+// Provider pour l'ID de l'utilisateur connecté
+final currentUserIdProvider = FutureProvider<String?>((ref) async {
+  final appwriteService = ref.watch(appwriteServiceProvider);
+  final user = await appwriteService.getCurrentUser();
+  return user?.$id;
+});
+
+// Provider pour récupérer les biens du propriétaire
+final proprietaireBiensProvider =
+    FutureProvider.autoDispose<List<BienModel>>((ref) async {
+  final userId = await ref.watch(currentUserIdProvider.future);
+  if (userId == null) return <BienModel>[];
+
+  final bienRepository = ref.watch(bienRepositoryProvider);
+  return bienRepository.getBiensByProprietaire(userId);
 });

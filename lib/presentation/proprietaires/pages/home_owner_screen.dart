@@ -17,6 +17,7 @@ import 'invoicing_screen.dart';
 import 'payment_history_screen.dart';
 import 'profile_screen.dart';
 import '../../../core/di/providers.dart';
+import '../../../core/services/appwrite_service.dart';
 
 class HomeOwnerScreen extends ConsumerStatefulWidget {
   const HomeOwnerScreen({super.key});
@@ -190,10 +191,9 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                ref.read(ownerLoginControllerProvider.notifier).resetState();
-                Navigator.pushReplacementNamed(context, '/login');
+                await _performLogout();
               },
               child: const Text('Se déconnecter'),
             ),
@@ -201,6 +201,34 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         );
       },
     );
+  }
+
+  Future<void> _performLogout() async {
+    try {
+      // Déconnexion Appwrite
+      await AppwriteService().logout();
+      
+      // Reset du state local
+      ref.read(ownerLoginControllerProvider.notifier).resetState();
+      
+      // Redirection vers la page de login
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login_owner',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la déconnexion: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildBottomNavigationBar() {
