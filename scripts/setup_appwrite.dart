@@ -18,6 +18,7 @@ const String contratsCollection = 'contrats';
 const String paiementsCollection = 'paiements';
 const String plaintesCollection = 'plaintes';
 const String facturesCollection = 'factures';
+const String invitationsCollection = 'invitations';
 
 // Bucket IDs
 const String imagesBucket = 'images';
@@ -487,6 +488,46 @@ Future<void> setupFacturesCollection(AppwriteHttpClient client) async {
   await createIndex(client, facturesCollection, 'statut_idx', 'key', ['statut']);
 }
 
+Future<void> setupInvitationsCollection(AppwriteHttpClient client) async {
+  await createCollection(client, invitationsCollection, 'Invitations');
+  await Future.delayed(Duration(milliseconds: 500));
+
+  // Identifiants
+  await createStringAttribute(client, invitationsCollection, 'bienId', 36, required: true);
+  await createStringAttribute(client, invitationsCollection, 'bienNom', 200, required: true);
+  await createStringAttribute(client, invitationsCollection, 'proprietaireId', 36, required: true);
+  await createStringAttribute(client, invitationsCollection, 'proprietaireNom', 200, required: true);
+  
+  // Infos locataire
+  await createStringAttribute(client, invitationsCollection, 'emailLocataire', 255, required: true);
+  await createStringAttribute(client, invitationsCollection, 'nomLocataire', 100);
+  await createStringAttribute(client, invitationsCollection, 'prenomLocataire', 100);
+  await createStringAttribute(client, invitationsCollection, 'telephoneLocataire', 20);
+  
+  // Infos location
+  await createFloatAttribute(client, invitationsCollection, 'loyerMensuel', required: true);
+  await createFloatAttribute(client, invitationsCollection, 'charges');
+  await createStringAttribute(client, invitationsCollection, 'message', 1000);
+  
+  // Statut et token
+  await createEnumAttribute(client, invitationsCollection, 'statut', 
+    ['pending', 'accepted', 'rejected', 'expired', 'cancelled'], 
+    defaultValue: 'pending'
+  );
+  await createStringAttribute(client, invitationsCollection, 'token', 64, required: true);
+  
+  // Dates
+  await createDatetimeAttribute(client, invitationsCollection, 'dateCreation');
+  await createDatetimeAttribute(client, invitationsCollection, 'dateExpiration');
+
+  await Future.delayed(Duration(seconds: 3));
+  await createIndex(client, invitationsCollection, 'proprietaire_idx', 'key', ['proprietaireId']);
+  await createIndex(client, invitationsCollection, 'bien_idx', 'key', ['bienId']);
+  await createIndex(client, invitationsCollection, 'email_idx', 'key', ['emailLocataire']);
+  await createIndex(client, invitationsCollection, 'token_idx', 'unique', ['token']);
+  await createIndex(client, invitationsCollection, 'statut_idx', 'key', ['statut']);
+}
+
 // ============== MAIN ==============
 
 Future<void> main() async {
@@ -506,28 +547,32 @@ Future<void> main() async {
     print('\n📦 CRÉATION DES COLLECTIONS\n');
     print('=' * 50);
 
-    print('\n[1/6] Collection Users');
+    print('\n[1/7] Collection Users');
     await setupUsersCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[2/6] Collection Biens');
+    print('\n[2/7] Collection Biens');
     await setupBiensCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[3/6] Collection Contrats');
+    print('\n[3/7] Collection Contrats');
     await setupContratsCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[4/6] Collection Paiements');
+    print('\n[4/7] Collection Paiements');
     await setupPaiementsCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[5/6] Collection Plaintes');
+    print('\n[5/7] Collection Plaintes');
     await setupPlaintesCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[6/6] Collection Factures');
+    print('\n[6/7] Collection Factures');
     await setupFacturesCollection(client);
+    await Future.delayed(Duration(seconds: 2));
+
+    print('\n[7/7] Collection Invitations');
+    await setupInvitationsCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
     // Créer les buckets de stockage

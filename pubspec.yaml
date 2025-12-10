@@ -41,11 +41,16 @@ dependencies:
   
   # Appwrite SDK pour le backend
   appwrite: ^13.0.0
+  
+  # Deep Linking - pour gérer les liens d'invitation
+  uni_links: ^0.5.1
+  
+  # HTTP client pour les appels API (EmailService)
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  http: ^1.2.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

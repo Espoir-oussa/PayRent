@@ -12,6 +12,7 @@ import '../../presentation/proprietaires/states/owner_register_state.dart';
 import '../services/api_service.dart';
 import '../services/appwrite_service.dart';
 import '../services/image_upload_service.dart';
+import '../services/invitation_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -52,6 +53,11 @@ final appwriteServiceProvider = Provider((ref) {
 // Provider du service d'upload d'images
 final imageUploadServiceProvider = Provider((ref) {
   return ImageUploadService(ref.watch(appwriteServiceProvider));
+});
+
+// Provider du service d'invitations
+final invitationServiceProvider = Provider((ref) {
+  return InvitationService(ref.watch(appwriteServiceProvider));
 });
 
 // =================================================================
