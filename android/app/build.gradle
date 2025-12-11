@@ -24,7 +24,7 @@ android {
         applicationId = "com.example.payrent"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21 // Requis pour Appwrite SDK
+        minSdkVersion = flutter.minSdkVersion // Requis pour Appwrite SDK
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
