@@ -4,11 +4,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/colors.dart';
-import '../../../config/theme.dart';
 import '../../../core/di/providers.dart';
 import '../../proprietaires/pages/auth_screens/owner_login_screen.dart';
 import '../../proprietaires/pages/home_owner_screen.dart';
 import '../../locataires/pages/home_tenant_screen.dart';
+import 'no_connection_page.dart';
 
 /// État de l'authentification
 enum AuthState {
@@ -145,30 +145,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 
+  bool _isConnectionError(Object? error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socket') ||
+        msg.contains('network') ||
+        msg.contains('connection') ||
+        msg.contains('internet');
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Écouter le résultat de la vérification d'authentification
     ref.listen<AsyncValue<AuthCheckResult>>(authStateProvider,
         (previous, next) {
-      next.whenData((result) {
-        _navigateToScreen(result);
-      });
+      next.when(
+        data: (result) {
+          _navigateToScreen(result);
+        },
+        error: (error, stack) {
+          if (_isConnectionError(error)) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const NoConnectionPage()),
+            );
+          }
+        },
+        loading: () {},
+      );
     });
 
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Spacer(flex: 3),
-
-              // Logo animé (texte uniquement)
-              AnimatedBuilder(
+        child: Stack(
+          children: [
+            // Logo centré
+            Center(
+              child: AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
                   return FadeTransition(
@@ -179,112 +192,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   );
                 },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Nom de l'app avec la police du logo
-                    Text(
-                      'PayRent',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: logoFontFamily,
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.accentRed,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Tagline
-                    Text(
-                      'Gestion locative simplifiée',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.accentRed.withAlpha(180),
-                        fontSize: 16,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
+                child: Image.asset(
+                  'assets/images/payrent_marron.png',
+                  width: 300,
+                  height: 300,
+                  fit: BoxFit.contain,
                 ),
               ),
-
-              const Spacer(flex: 3),
-
-              // Indicateur de chargement
-              authState.when(
-                loading: () => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.accentRed.withAlpha(200),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Chargement...',
-                      style: TextStyle(
-                        color: AppColors.accentRed.withAlpha(150),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
+            ),
+            // Loader barre horizontale en bas
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 32,
+              child: authState.when(
+                loading: () => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 48),
+                  child: LinearProgressIndicator(
+                    minHeight: 5,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(AppColors.accentRed),
+                  ),
                 ),
-                error: (error, stack) => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline_rounded,
-                      color: AppColors.accentRed.withAlpha(200),
-                      size: 32,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Erreur de connexion',
-                      style: TextStyle(
-                        color: AppColors.accentRed.withAlpha(150),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () {
-                        ref.invalidate(authStateProvider);
-                      },
-                      child: Text(
-                        'Réessayer',
-                        style: TextStyle(
-                          color: AppColors.accentRed,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
+                error: (error, stack) => Center(
+                  child: Icon(Icons.error_outline_rounded,
+                      color: AppColors.accentRed, size: 32),
                 ),
                 data: (_) => const SizedBox.shrink(),
               ),
-
-              const Spacer(flex: 1),
-
-              // Version de l'app
-              Padding(
-                padding: const EdgeInsets.only(bottom: 32),
-                child: Text(
-                  'Version 1.0.0',
-                  style: TextStyle(
-                    color: AppColors.accentRed.withAlpha(100),
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

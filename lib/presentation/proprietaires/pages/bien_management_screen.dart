@@ -17,6 +17,7 @@ import '../../../core/di/providers.dart';
 import '../../../data/models/bien_model.dart';
 import '../../shared/widgets/invitation_modal.dart';
 import 'bien_detail_screen.dart';
+import '../../shared/pages/no_connection_page.dart';
 
 class BienManagementScreen extends ConsumerStatefulWidget {
   const BienManagementScreen({super.key});
@@ -139,7 +140,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
       ref: ref,
       bien: bien,
     );
-    
+
     if (invitation != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -750,7 +751,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
 
       final bienRepository = ref.read(bienRepositoryProvider);
       await bienRepository.createBien(bien);
-      
+
       // Rafraîchir la liste des biens
       ref.invalidate(proprietaireBiensProvider);
 
@@ -1105,6 +1106,15 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
   }
 
   Widget _buildErrorState(String error) {
+    if (_isConnectionError(error)) {
+      // Naviguer vers la page NoConnectionPage
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const NoConnectionPage()),
+        );
+      });
+      return const SizedBox.shrink();
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1138,6 +1148,14 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         ),
       ),
     );
+  }
+
+  bool _isConnectionError(Object? error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socket') ||
+        msg.contains('network') ||
+        msg.contains('connection') ||
+        msg.contains('internet');
   }
 
   @override

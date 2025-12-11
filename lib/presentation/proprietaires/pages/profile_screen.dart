@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/services/appwrite_service.dart';
 import '../../../config/colors.dart';
 import '../../../config/environment.dart';
+import '../../shared/pages/no_connection_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -13,6 +14,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isConnectionError(Object? error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socket') ||
+        msg.contains('network') ||
+        msg.contains('connection') ||
+        msg.contains('internet');
+  }
+
   final _formKey = GlobalKey<FormState>();
   final _appwriteService = AppwriteService();
   final _imagePicker = ImagePicker();
@@ -119,15 +128,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
         }
       } catch (dbError) {
-        // Erreur de base de données - afficher quand même les infos de compte
+        // Erreur de base de données - afficher NoConnectionPage si réseau
         debugPrint('Erreur DB profil: $dbError');
-        final nameParts = user.name.split(' ');
-        setState(() {
-          if (nameParts.isNotEmpty) _prenomController.text = nameParts.first;
-          if (nameParts.length > 1)
-            _nomController.text = nameParts.sublist(1).join(' ');
-          _role = 'proprietaire';
-        });
+        if (_isConnectionError(dbError)) {
+          if (mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const NoConnectionPage()),
+              );
+            });
+          }
+        } else {
+          final nameParts = user.name.split(' ');
+          setState(() {
+            if (nameParts.isNotEmpty) _prenomController.text = nameParts.first;
+            if (nameParts.length > 1)
+              _nomController.text = nameParts.sublist(1).join(' ');
+            _role = 'proprietaire';
+          });
+        }
       }
     } catch (e) {
       debugPrint('Erreur chargement profil: $e');

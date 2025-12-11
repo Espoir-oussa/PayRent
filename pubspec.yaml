@@ -55,6 +55,7 @@ dependencies:
   
   # Installer l'APK (Android)
   open_filex: ^4.5.0
+  shared_preferences: ^2.5.4
 
 dev_dependencies:
   flutter_test:

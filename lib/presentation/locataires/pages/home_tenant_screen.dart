@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/colors.dart';
 import '../../../config/theme.dart';
 import '../../../core/di/providers.dart';
+import '../../shared/pages/no_connection_page.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
   const HomeTenantScreen({super.key});
@@ -22,6 +23,14 @@ class HomeTenantScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
+  bool _isConnectionError(Object? error) {
+    final msg = error.toString().toLowerCase();
+    return msg.contains('socket') ||
+        msg.contains('network') ||
+        msg.contains('connection') ||
+        msg.contains('internet');
+  }
+
   int _currentIndex = 0;
   String? _userName;
   bool _isLoading = true;
@@ -43,7 +52,15 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (_isConnectionError(e)) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const NoConnectionPage()),
+            );
+          });
+        }
+      } else if (mounted) {
         setState(() => _isLoading = false);
       }
     }

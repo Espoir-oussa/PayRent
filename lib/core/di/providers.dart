@@ -1,6 +1,8 @@
 // Fichier : lib/core/di/providers.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/local_cache.dart';
+import 'dart:convert';
 
 import '../../presentation/proprietaires/controllers/owner_login_controller.dart';
 import '../../presentation/proprietaires/states/owner_login_state.dart';
@@ -163,11 +165,28 @@ final currentUserIdProvider = FutureProvider<String?>((ref) async {
 });
 
 // Provider pour récupérer les biens du propriétaire
+
 final proprietaireBiensProvider =
     FutureProvider.autoDispose<List<BienModel>>((ref) async {
   final userId = await ref.watch(currentUserIdProvider.future);
   if (userId == null) return <BienModel>[];
 
   final bienRepository = ref.watch(bienRepositoryProvider);
-  return bienRepository.getBiensByProprietaire(userId);
+
+  final cache = LocalCache<List<BienModel>>(
+    cacheKey: 'proprietaire_biens_$userId',
+    fetcher: () async => bienRepository.getBiensByProprietaire(userId),
+    fromJson: (json) {
+      final list = (json['data'] as List?) ?? [];
+      return list
+          .map((e) => BienModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    },
+    toJson: (list) => {
+      'data': list.map((e) => e.toJson()).toList(),
+    },
+    revalidateDuration: const Duration(minutes: 5),
+  );
+
+  return cache.getData();
 });
