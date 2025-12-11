@@ -711,23 +711,161 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _deleteAccount() async {
     try {
-      // Supprimer le document utilisateur
+      if (_userId == null) {
+        throw Exception('Utilisateur non identifié');
+      }
+
+      final databases = Databases(_appwriteService.client);
+
+      // 1. Récupérer tous les biens du propriétaire pour supprimer les données liées
+      List<String> bienIds = [];
+      try {
+        final biens = await databases.listDocuments(
+          databaseId: Environment.databaseId,
+          collectionId: Environment.biensCollectionId,
+          queries: [Query.equal('proprietaireId', _userId!)],
+        );
+        bienIds = biens.documents.map((doc) => doc.$id).toList();
+      } catch (e) {
+        debugPrint('Erreur récupération biens: $e');
+      }
+
+      // 2. Supprimer tous les paiements liés aux biens
+      for (final bienId in bienIds) {
+        try {
+          final paiements = await databases.listDocuments(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.paiementsCollectionId,
+            queries: [Query.equal('bienId', bienId)],
+          );
+          for (final doc in paiements.documents) {
+            await databases.deleteDocument(
+              databaseId: Environment.databaseId,
+              collectionId: Environment.paiementsCollectionId,
+              documentId: doc.$id,
+            );
+          }
+        } catch (e) {
+          debugPrint('Erreur suppression paiements: $e');
+        }
+      }
+
+      // 3. Supprimer toutes les factures liées aux biens
+      for (final bienId in bienIds) {
+        try {
+          final factures = await databases.listDocuments(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.facturesCollectionId,
+            queries: [Query.equal('bienId', bienId)],
+          );
+          for (final doc in factures.documents) {
+            await databases.deleteDocument(
+              databaseId: Environment.databaseId,
+              collectionId: Environment.facturesCollectionId,
+              documentId: doc.$id,
+            );
+          }
+        } catch (e) {
+          debugPrint('Erreur suppression factures: $e');
+        }
+      }
+
+      // 4. Supprimer toutes les plaintes du propriétaire
+      try {
+        final plaintes = await databases.listDocuments(
+          databaseId: Environment.databaseId,
+          collectionId: Environment.plaintesCollectionId,
+          queries: [Query.equal('proprietaireId', _userId!)],
+        );
+        for (final doc in plaintes.documents) {
+          await databases.deleteDocument(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.plaintesCollectionId,
+            documentId: doc.$id,
+          );
+        }
+      } catch (e) {
+        debugPrint('Erreur suppression plaintes: $e');
+      }
+
+      // 5. Supprimer toutes les invitations du propriétaire
+      try {
+        final invitations = await databases.listDocuments(
+          databaseId: Environment.databaseId,
+          collectionId: Environment.invitationsCollectionId,
+          queries: [Query.equal('proprietaireId', _userId!)],
+        );
+        for (final doc in invitations.documents) {
+          await databases.deleteDocument(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.invitationsCollectionId,
+            documentId: doc.$id,
+          );
+        }
+      } catch (e) {
+        debugPrint('Erreur suppression invitations: $e');
+      }
+
+      // 6. Supprimer tous les contrats du propriétaire
+      try {
+        final contrats = await databases.listDocuments(
+          databaseId: Environment.databaseId,
+          collectionId: Environment.contratsCollectionId,
+          queries: [Query.equal('proprietaireId', _userId!)],
+        );
+        for (final doc in contrats.documents) {
+          await databases.deleteDocument(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.contratsCollectionId,
+            documentId: doc.$id,
+          );
+        }
+      } catch (e) {
+        debugPrint('Erreur suppression contrats: $e');
+      }
+
+      // 7. Supprimer tous les biens du propriétaire
+      for (final bienId in bienIds) {
+        try {
+          await databases.deleteDocument(
+            databaseId: Environment.databaseId,
+            collectionId: Environment.biensCollectionId,
+            documentId: bienId,
+          );
+        } catch (e) {
+          debugPrint('Erreur suppression bien $bienId: $e');
+        }
+      }
+
+      // 8. Supprimer le document utilisateur
       if (_userDocId != null) {
-        final databases = Databases(_appwriteService.client);
         await databases.deleteDocument(
-          databaseId: 'payrent_db',
-          collectionId: 'users',
+          databaseId: Environment.databaseId,
+          collectionId: Environment.usersCollectionId,
           documentId: _userDocId!,
         );
       }
 
-      // Déconnecter l'utilisateur
-      await _appwriteService.logout();
+      // 9. Supprimer/désactiver le compte Auth Appwrite
+      try {
+        await _appwriteService.deleteCurrentAccount();
+      } catch (e) {
+        debugPrint('Erreur désactivation compte Auth: $e');
+        // Continuer même si ça échoue - on déconnecte quand même
+      }
+
+      // 10. Déconnecter l'utilisateur
+      try {
+        await _appwriteService.logout();
+      } catch (e) {
+        // Session peut déjà être invalide après deleteCurrentAccount
+        debugPrint('Logout après suppression: $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Compte supprimé avec succès'),
+            content: Text('Compte supprimé définitivement'),
             backgroundColor: Colors.green,
           ),
         );
