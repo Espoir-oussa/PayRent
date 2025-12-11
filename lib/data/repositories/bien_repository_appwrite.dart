@@ -2,6 +2,7 @@
 // Implémentation du repository des biens utilisant Appwrite
 
 import 'package:appwrite/appwrite.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/services/appwrite_service.dart';
 import '../../config/environment.dart';
 import '../../domain/repositories/bien_repository.dart';
@@ -15,18 +16,31 @@ class BienRepositoryAppwrite implements BienRepository {
   @override
   Future<List<BienModel>> getBiensByProprietaire(String proprietaireId) async {
     try {
+      debugPrint('🔍 Recherche des biens pour proprietaireId: $proprietaireId');
+      
+      // Requête filtrée par proprietaireId
       final result = await _appwriteService.listDocuments(
         collectionId: Environment.biensCollectionId,
         queries: [
           Query.equal('proprietaireId', proprietaireId),
-          Query.orderDesc('createdAt'),
         ],
       );
 
-      return result.documents
-          .map((doc) => BienModel.fromAppwrite(doc))
+      debugPrint('📦 Documents trouvés: ${result.documents.length}');
+
+      final biens = result.documents
+          .map((doc) {
+            final bien = BienModel.fromAppwrite(doc);
+            debugPrint('  - Bien: ${bien.nom}, proprietaireId: ${bien.proprietaireId}');
+            return bien;
+          })
+          .where((bien) => bien.proprietaireId == proprietaireId)
           .toList();
+      
+      debugPrint('✅ Biens filtrés: ${biens.length}');
+      return biens;
     } on AppwriteException catch (e) {
+      debugPrint('❌ Erreur récupération des biens: ${e.message}');
       throw Exception('Erreur récupération des biens: ${e.message}');
     }
   }

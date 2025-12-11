@@ -1,26 +1,32 @@
 // Fichier : lib/core/services/email_service.dart
-// Service pour envoyer des emails via Resend API
+// Service pour envoyer des emails via Gmail SMTP
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 
-/// Configuration du service email - Utilise Resend
+/// Configuration du service email - Utilise Gmail SMTP
 class EmailConfig {
-  // ⚠️ IMPORTANT: En production, stockez ces clés de manière sécurisée
-  // (variables d'environnement, Appwrite Functions, ou backend sécurisé)
+  // ⚠️ IMPORTANT: En production, stockez ces informations de manière sécurisée
   
-  // Resend API - Service principal
-  static const String resendApiKey = 're_ZzgufrTg_2D3iVhiL5a37ry1uxDd5BKtV';
-  static const String resendApiUrl = 'https://api.resend.com/emails';
+  // Configuration Gmail
+  // Pour utiliser Gmail, vous devez :
+  // 1. Activer "Accès moins sécurisé" OU
+  // 2. Créer un "Mot de passe d'application" (recommandé) :
+  //    - Aller sur https://myaccount.google.com/apppasswords
+  //    - Créer un mot de passe pour "Mail" sur "Autre (PayRent)"
+  //    - Utiliser ce mot de passe ci-dessous (pas votre mot de passe Gmail normal)
+  static const String gmailEmail = 'oussachadrac@gmail.com';
+  static const String gmailAppPassword = 'nsbfccxdpqmrfzur'; // Mot de passe d'application Gmail
   
-  // Expéditeur (doit être un domaine vérifié sur Resend)
-  static const String senderEmail = 'contact@igoradande.me';
+  // Nom de l'expéditeur
   static const String senderName = 'PayRent';
   
   // URLs de l'application
   static const String appScheme = 'payrent';
-  static const String webBaseUrl = 'https://payrent.app'; // Pour les liens web
+  // URL de la page de redirection (à héberger sur GitHub Pages ou autre)
+  // Format: https://votre-username.github.io/payrent-redirect/
+  static const String webBaseUrl = 'https://espoir-oussa.github.io/payrent-releases';
 }
 
 class EmailService {
@@ -31,21 +37,33 @@ class EmailService {
     required String proprietaireNom,
     required String bienNom,
     required String token,
+    String? connectionCode,
+    String? temporaryPassword,
+    DateTime? connectionCodeExpiry,
     required double loyerMensuel,
     double? charges,
     String? messagePersonnalise,
   }) async {
-    final acceptUrl = '${EmailConfig.webBaseUrl}/accept-invitation?token=$token';
-    final rejectUrl = '${EmailConfig.webBaseUrl}/reject-invitation?token=$token';
+    // URLs web avec page de redirection (GitHub Pages)
+    // La page index.html redirigera automatiquement vers l'app si installée
+    // Optionally include the connectionCode in the accept/reject links so that
+    // the tenant can open the link and have the code pre-filled for quick acceptation.
+    // Send temporaryPassword and code as optional query params
+    final codeQuery = connectionCode != null ? '&code=$connectionCode' : '';
+    final passQuery = temporaryPassword != null ? '&tempPass=$temporaryPassword' : '';
+    final acceptUrl = '${EmailConfig.webBaseUrl}?token=$token&action=accept$codeQuery$passQuery';
+    final rejectUrl = '${EmailConfig.webBaseUrl}?token=$token&action=reject$codeQuery$passQuery';
     
-    // Lien deep link pour l'app mobile
-    final appAcceptUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=accept';
-    final appRejectUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=reject';
+    // Lien deep link pour l'app mobile (à copier/coller)
+    final appAcceptUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=accept${codeQuery}${passQuery}';
+    final appRejectUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=reject${codeQuery}${passQuery}';
 
     final htmlContent = _buildInvitationEmailHtml(
       recipientName: recipientName,
       proprietaireNom: proprietaireNom,
       bienNom: bienNom,
+      connectionCode: connectionCode,
+      connectionCodeExpiry: connectionCodeExpiry,
       loyerMensuel: loyerMensuel,
       charges: charges,
       messagePersonnalise: messagePersonnalise,
@@ -55,8 +73,8 @@ class EmailService {
       appRejectUrl: appRejectUrl,
     );
 
-    // Envoyer avec Resend
-    return await _sendWithResend(
+    // Envoyer avec Gmail SMTP
+    return await _sendWithGmail(
       to: recipientEmail,
       subject: '🏠 Invitation à rejoindre $bienNom sur PayRent',
       htmlContent: htmlContent,
@@ -132,7 +150,7 @@ class EmailService {
 </html>
 ''';
 
-    return await _sendWithResend(
+    return await _sendWithGmail(
       to: recipientEmail,
       subject: '🎉 Bienvenue sur PayRent - Votre compte est prêt !',
       htmlContent: htmlContent,
@@ -144,6 +162,8 @@ class EmailService {
     required String recipientName,
     required String proprietaireNom,
     required String bienNom,
+    String? connectionCode,
+    DateTime? connectionCodeExpiry,
     required double loyerMensuel,
     double? charges,
     String? messagePersonnalise,
@@ -210,6 +230,15 @@ class EmailService {
           $loyerFormatted FCFA / mois$chargesText
         </p>
       </div>
+
+      <!-- Code de connexion -->
+      ${connectionCode != null ? '''
+      <div style="background-color: #fff3e0; border-radius: 12px; padding: 18px; margin: 15px 0; border-left: 6px solid #ffb74d;">
+        <p style="margin:0 0 8px 0; font-size:14px; color:#e65100; font-weight:bold;">🔐 Code de connexion</p>
+        <p style="margin:0; font-size:18px; color:#333;">Utilisez ce code pour vous connecter : <strong style="font-size:20px;">$connectionCode</strong></p>
+        <p style="margin:10px 0 0 0; font-size:13px; color:#666;">Le code est valide jusqu'au ${connectionCodeExpiry != null ? connectionCodeExpiry.toLocal().toString().split(' ')[0] : DateTime.now().add(Duration(days:7)).toLocal().toString().split(' ')[0]}.</p>
+      </div>
+      ''' : ''}
       
       $messageSection
       
@@ -217,7 +246,7 @@ class EmailService {
         En acceptant cette invitation, un compte PayRent sera automatiquement créé pour vous et vous pourrez gérer vos paiements et communiquer avec votre propriétaire.
       </p>
       
-      <!-- Boutons d'action -->
+      <!-- Boutons d'action - Liens web qui seront gérés par l'app si installée -->
       <div style="text-align: center; margin: 35px 0;">
         <a href="$acceptUrl" style="display: inline-block; background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; margin: 5px;">
           ✓ Accepter l'invitation
@@ -228,13 +257,16 @@ class EmailService {
         </a>
       </div>
       
-      <!-- Lien alternatif -->
-      <div style="background-color: #fafafa; border-radius: 8px; padding: 15px; margin-top: 25px;">
-        <p style="margin: 0 0 10px 0; font-size: 12px; color: #666;">
-          Si les boutons ne fonctionnent pas, copiez ce lien dans votre navigateur :
+      <!-- Instructions pour ouvrir dans l'app -->
+      <div style="background-color: #e3f2fd; border-radius: 8px; padding: 15px; margin: 20px 0; border-left: 4px solid #1976d2;">
+        <p style="margin: 0 0 10px 0; font-size: 13px; color: #1565c0;">
+          📱 <strong>Vous avez l'application PayRent installée ?</strong>
         </p>
-        <p style="margin: 0; font-size: 11px; color: #999; word-break: break-all;">
-          $acceptUrl
+        <p style="margin: 0; font-size: 12px; color: #1565c0;">
+          Copiez ce lien et ouvrez-le dans votre navigateur pour lancer l'app :
+        </p>
+        <p style="margin: 10px 0 0 0; font-size: 11px; color: #0d47a1; word-break: break-all; background: #bbdefb; padding: 8px; border-radius: 4px;">
+          $appAcceptUrl
         </p>
       </div>
     </div>
@@ -287,37 +319,49 @@ PayRent - Gestion locative simplifiée
 ''';
   }
 
-  /// Envoie l'email via Resend API
-  Future<bool> _sendWithResend({
+  /// Envoie l'email via Gmail SMTP
+  Future<bool> _sendWithGmail({
     required String to,
     required String subject,
     required String htmlContent,
   }) async {
-    if (EmailConfig.resendApiKey.isEmpty) {
-      debugPrint('⚠️ Clé API Resend non configurée.');
+    if (EmailConfig.gmailAppPassword.isEmpty || 
+        EmailConfig.gmailAppPassword == 'VOTRE_MOT_DE_PASSE_APPLICATION') {
+      debugPrint('⚠️ Mot de passe d\'application Gmail non configuré.');
+      debugPrint('📝 Instructions:');
+      debugPrint('   1. Allez sur https://myaccount.google.com/apppasswords');
+      debugPrint('   2. Créez un mot de passe pour "Mail" > "Autre (PayRent)"');
+      debugPrint('   3. Copiez le mot de passe dans EmailConfig.gmailAppPassword');
       return false;
     }
 
     try {
-      debugPrint('📧 Envoi email à $to via Resend...');
+      debugPrint('📧 Envoi email à $to via Gmail SMTP...');
       
-      final response = await http.post(
-        Uri.parse(EmailConfig.resendApiUrl),
-        headers: {
-          'Authorization': 'Bearer ${EmailConfig.resendApiKey}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'from': '${EmailConfig.senderName} <${EmailConfig.senderEmail}>',
-          'to': [to],
-          'subject': subject,
-          'html': htmlContent,
-        }),
-      );
+      // Configuration du serveur SMTP Gmail
+      final smtpServer = gmail(EmailConfig.gmailEmail, EmailConfig.gmailAppPassword);
 
-      return response.statusCode == 200;
+      // Créer le message
+      final message = Message()
+        ..from = Address(EmailConfig.gmailEmail, EmailConfig.senderName)
+        ..recipients.add(to)
+        ..subject = subject
+        ..html = htmlContent;
+
+      // Envoyer l'email
+      final sendReport = await send(message, smtpServer);
+      
+      debugPrint('✅ Email envoyé avec succès à $to');
+      debugPrint('📧 Rapport: $sendReport');
+      return true;
+    } on MailerException catch (e) {
+      debugPrint('❌ Erreur envoi email: ${e.message}');
+      for (var p in e.problems) {
+        debugPrint('   Problème: ${p.code}: ${p.msg}');
+      }
+      return false;
     } catch (e) {
-      debugPrint('❌ Exception Resend: $e');
+      debugPrint('❌ Exception Gmail SMTP: $e');
       return false;
     }
   }

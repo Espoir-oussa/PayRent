@@ -15,6 +15,7 @@ import 'dart:io';
 import '../../../config/colors.dart';
 import '../../../core/di/providers.dart';
 import '../../../data/models/bien_model.dart';
+import '../../shared/widgets/invitation_modal.dart';
 import 'bien_detail_screen.dart';
 
 class BienManagementScreen extends ConsumerStatefulWidget {
@@ -132,122 +133,21 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
   }
 
   // Modal pour inviter un locataire
-  void _inviterLocataire(BienModel bien) {
-    final emailController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
+  Future<void> _inviterLocataire(BienModel bien) async {
+    final invitation = await showInvitationModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryDark.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.person_add, color: AppColors.primaryDark),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Inviter un locataire',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                        Text(
-                          bien.nom,
-                          style: TextStyle(color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: 'Email du locataire',
-                  hintText: 'exemple@email.com',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez entrer un email';
-                  }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                      .hasMatch(value)) {
-                    return 'Email invalide';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    // TODO: Implémenter l'envoi d'invitation
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                            'Invitation envoyée à ${emailController.text}'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.send),
-                label: const Text('Envoyer l\'invitation'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryDark,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+      ref: ref,
+      bien: bien,
     );
+    
+    if (invitation != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invitation envoyée avec succès !'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   // Modal pour modifier un bien
@@ -834,6 +734,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         throw Exception('Utilisateur non connecté');
       }
 
+      debugPrint('🏠 Création bien avec proprietaireId: $userId');
+
       final bien = BienModel(
         proprietaireId: userId,
         nom: nom,
@@ -848,6 +750,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
 
       final bienRepository = ref.read(bienRepositoryProvider);
       await bienRepository.createBien(bien);
+      
+      // Rafraîchir la liste des biens
       ref.invalidate(proprietaireBiensProvider);
 
       if (mounted) {
@@ -1013,7 +917,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
           MaterialPageRoute(
             builder: (context) => BienDetailScreen(bien: bien),
           ),
-        ).then((_) => ref.invalidate(proprietaireBiensProvider));
+        ).then((_) {
+          ref.invalidate(proprietaireBiensProvider);
+        });
       },
       child: Card(
         clipBehavior: Clip.antiAlias,
@@ -1222,7 +1128,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => ref.invalidate(proprietaireBiensProvider),
+              onPressed: () {
+                ref.invalidate(proprietaireBiensProvider);
+              },
               icon: const Icon(Icons.refresh),
               label: const Text('Réessayer'),
             ),

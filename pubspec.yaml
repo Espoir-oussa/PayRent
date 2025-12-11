@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.2+2
 
 environment:
   sdk: ^3.5.1
@@ -47,6 +47,27 @@ dependencies:
   
   # HTTP client pour les appels API (EmailService)
   http: ^1.2.1
+  mailer: ^6.6.0
+  # Hashing
+  crypto: ^3.0.2
+  
+  # Package info pour la version de l'app
+  package_info_plus: ^8.0.0
+  
+  # Ouvrir des URLs (pour télécharger l'APK)
+  url_launcher: ^6.2.5
+  
+  # Permissions pour Android
+  permission_handler: ^11.3.0
+  
+  # Téléchargement de fichiers
+  dio: ^5.4.0
+  
+  # Chemin pour stocker les fichiers
+  path_provider: ^2.1.2
+  
+  # Installer l'APK (Android)
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:

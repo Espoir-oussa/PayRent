@@ -78,6 +78,9 @@ class InvitationModel {
   final double loyerMensuel;
   final double? charges;
   final String? message; // Message personnalisé du propriétaire
+  final String? connectionCodeHash; // Hash du code de connexion stocké en DB
+  final DateTime? connectionCodeExpiry;
+  final bool? connectionCodeUsed;
 
   InvitationModel({
     this.id,
@@ -96,6 +99,9 @@ class InvitationModel {
     required this.loyerMensuel,
     this.charges,
     this.message,
+    this.connectionCodeHash,
+    this.connectionCodeExpiry,
+    this.connectionCodeUsed,
   });
 
   /// Créer depuis un document Appwrite
@@ -118,6 +124,9 @@ class InvitationModel {
       loyerMensuel: (data['loyerMensuel'] as num?)?.toDouble() ?? 0.0,
       charges: (data['charges'] as num?)?.toDouble(),
       message: data['message'],
+      connectionCodeHash: data['connectionCodeHash'],
+      connectionCodeExpiry: data['connectionCodeExpiry'] != null ? DateTime.parse(data['connectionCodeExpiry']) : null,
+      connectionCodeUsed: (data['connectionCodeUsed'] as bool?) ?? false,
     );
   }
 
@@ -139,6 +148,9 @@ class InvitationModel {
       'loyerMensuel': loyerMensuel,
       'charges': charges,
       'message': message,
+      'connectionCodeHash': connectionCodeHash,
+      'connectionCodeExpiry': connectionCodeExpiry?.toIso8601String(),
+      'connectionCodeUsed': connectionCodeUsed ?? false,
     };
   }
 
@@ -167,6 +179,9 @@ class InvitationModel {
     double? loyerMensuel,
     double? charges,
     String? message,
+    String? connectionCodeHash,
+    DateTime? connectionCodeExpiry,
+    bool? connectionCodeUsed,
   }) {
     return InvitationModel(
       id: id ?? this.id,
@@ -185,6 +200,18 @@ class InvitationModel {
       loyerMensuel: loyerMensuel ?? this.loyerMensuel,
       charges: charges ?? this.charges,
       message: message ?? this.message,
+      connectionCodeHash: connectionCodeHash ?? this.connectionCodeHash,
+      connectionCodeExpiry: connectionCodeExpiry ?? this.connectionCodeExpiry,
+      connectionCodeUsed: connectionCodeUsed ?? this.connectionCodeUsed,
     );
+  }
+
+  /// Convertir en Map pour Appwrite (n'inclut que le hash/expiry)
+  Map<String, dynamic> toAppwriteWithHash() {
+    final map = toAppwrite();
+    if (connectionCodeHash != null) map['connectionCodeHash'] = connectionCodeHash;
+    if (connectionCodeExpiry != null) map['connectionCodeExpiry'] = connectionCodeExpiry!.toIso8601String();
+    if (connectionCodeUsed != null) map['connectionCodeUsed'] = connectionCodeUsed;
+    return map;
   }
 }

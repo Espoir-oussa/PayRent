@@ -11,6 +11,13 @@ import '../../data/models/bien_model.dart';
 import 'appwrite_service.dart';
 import 'email_service.dart';
 
+/// Résultat d'une création d'invitation, contenant l'invitation et si l'email a bien été envoyé
+class InvitationResult {
+  final InvitationModel invitation;
+  final bool emailSent;
+  InvitationResult({required this.invitation, required this.emailSent});
+}
+
 class InvitationService {
   final AppwriteService _appwriteService;
   final EmailService _emailService = EmailService();
@@ -52,8 +59,11 @@ class InvitationService {
     return chars.join();
   }
 
+  /// Résultat d'une création d'invitation
+  
+
   /// Créer et envoyer une invitation
-  Future<InvitationModel> createInvitation({
+  Future<InvitationResult> createInvitation({
     required BienModel bien,
     required String emailLocataire,
     String? nomLocataire,
@@ -152,7 +162,7 @@ class InvitationService {
       final invitationLink = _buildInvitationLink(token);
       debugPrint('🔗 Lien d\'invitation: $invitationLink');
 
-      return InvitationModel.fromAppwrite(doc);
+      return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), emailSent: emailSent);
     } on AppwriteException catch (e) {
       throw Exception('Erreur lors de la création de l\'invitation: ${e.message}');
     }
@@ -351,6 +361,151 @@ class InvitationService {
     }
   }
 
+  /// Accepter une invitation en utilisant un mot de passe temporaire (deep link)
+  Future<Map<String, dynamic>> acceptInvitationWithPassword({
+    required String token,
+    required String temporaryPassword,
+  }) async {
+    try {
+      final invitation = await getInvitationByToken(token);
+      if (invitation == null) throw Exception('Invitation non trouvée');
+
+      if (!invitation.canBeAccepted) {
+        if (invitation.isExpired) throw Exception('Cette invitation a expiré');
+        throw Exception('Cette invitation n\'est plus valide');
+      }
+
+      final nom = invitation.nomLocataire ?? 'Locataire';
+      final prenom = invitation.prenomLocataire ?? '';
+      final fullName = '$prenom $nom'.trim();
+
+      try {
+        // Tenter de créer le compte avec le mot de passe temporaire
+        final user = await _appwriteService.createAccount(
+          email: invitation.emailLocataire,
+          password: temporaryPassword,
+          name: fullName,
+        );
+
+        // Se connecter
+        await _appwriteService.login(email: invitation.emailLocataire, password: temporaryPassword);
+
+        // Créer le profil utilisateur
+        final userDoc = await _appwriteService.createDocument(
+          collectionId: Environment.usersCollectionId,
+          documentId: user.$id,
+          data: {
+            'email': invitation.emailLocataire,
+            'nom': nom,
+            'prenom': prenom,
+            'telephone': invitation.telephoneLocataire ?? '',
+            'role': 'locataire',
+            'adresse': '',
+            'photoUrl': '',
+            'mustChangePassword': true,
+            'createdAt': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          },
+          permissions: [
+            Permission.read(Role.user(user.$id)),
+            Permission.update(Role.user(user.$id)),
+            Permission.read(Role.user(invitation.proprietaireId)),
+          ],
+        );
+
+        // Créer le contrat
+        await _appwriteService.createDocument(
+          collectionId: Environment.contratsCollectionId,
+          data: {
+            'bienId': invitation.bienId,
+            'locataireId': user.$id,
+            'proprietaireId': invitation.proprietaireId,
+            'dateDebut': DateTime.now().toIso8601String(),
+            'dateFin': null,
+            'loyerMensuel': invitation.loyerMensuel,
+            'charges': invitation.charges ?? 0,
+            'caution': 0,
+            'jourPaiement': 1,
+            'statut': 'actif',
+            'documentUrl': null,
+            'notes': invitation.message,
+            'createdAt': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          },
+          permissions: [
+            Permission.read(Role.user(user.$id)),
+            Permission.read(Role.user(invitation.proprietaireId)),
+            Permission.update(Role.user(invitation.proprietaireId)),
+          ],
+        );
+
+        // Mettre à jour l'invitation et le bien
+        await _appwriteService.updateDocument(
+          collectionId: Environment.invitationsCollectionId,
+          documentId: invitation.id!,
+          data: {'statut': 'accepted'},
+        );
+
+        await _appwriteService.updateDocument(
+          collectionId: Environment.biensCollectionId,
+          documentId: invitation.bienId,
+          data: {'locataireId': user.$id, 'statut': 'occupe', 'updatedAt': DateTime.now().toIso8601String()},
+        );
+
+        return {'user': UserModel.fromAppwrite(userDoc, user.$id), 'temporaryPassword': temporaryPassword};
+      } on AppwriteException catch (e) {
+        final msg = e.message?.toLowerCase() ?? '';
+        if (msg.contains('already') || msg.contains('exists') || msg.contains('user_already_exists')) {
+          // Compte existe déjà : essayer de se connecter avec le mot de passe temporaire
+          try {
+            await _appwriteService.login(email: invitation.emailLocataire, password: temporaryPassword);
+            final currentUser = await _appwriteService.getCurrentUser();
+            if (currentUser == null) throw Exception('Impossible de récupérer l\'utilisateur après login');
+
+            // Créer le contrat si nécessaire
+            await _appwriteService.createDocument(
+              collectionId: Environment.contratsCollectionId,
+              data: {
+                'bienId': invitation.bienId,
+                'locataireId': currentUser.$id,
+                'proprietaireId': invitation.proprietaireId,
+                'dateDebut': DateTime.now().toIso8601String(),
+                'dateFin': null,
+                'loyerMensuel': invitation.loyerMensuel,
+                'charges': invitation.charges ?? 0,
+                'caution': 0,
+                'jourPaiement': 1,
+                'statut': 'actif',
+                'documentUrl': null,
+                'notes': invitation.message,
+                'createdAt': DateTime.now().toIso8601String(),
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+              permissions: [
+                Permission.read(Role.user(currentUser.$id)),
+                Permission.read(Role.user(invitation.proprietaireId)),
+                Permission.update(Role.user(invitation.proprietaireId)),
+              ],
+            );
+
+            await _appwriteService.updateDocument(collectionId: Environment.invitationsCollectionId, documentId: invitation.id!, data: {'statut': 'accepted'});
+            await _appwriteService.updateDocument(collectionId: Environment.biensCollectionId, documentId: invitation.bienId, data: {'locataireId': currentUser.$id, 'statut': 'occupe', 'updatedAt': DateTime.now().toIso8601String()});
+
+            final userDoc = await _appwriteService.getDocument(collectionId: Environment.usersCollectionId, documentId: currentUser.$id);
+            return {'user': UserModel.fromAppwrite(userDoc, currentUser.$id)};
+          } on AppwriteException catch (_) {
+            // Échec de connexion, envoyer recovery
+            await _appwriteService.createRecovery(email: invitation.emailLocataire, url: Environment.appwritePublicEndpoint);
+            throw Exception('Un compte existe déjà. Un email de récupération a été envoyé.');
+          }
+        }
+        rethrow;
+      }
+    } on AppwriteException catch (e) {
+      throw Exception('Erreur lors de l\'acceptation: ${e.message}');
+    }
+  }
+
   /// Refuser une invitation
   Future<void> rejectInvitation(String token) async {
     try {
@@ -366,6 +521,66 @@ class InvitationService {
       );
     } on AppwriteException catch (e) {
       throw Exception('Erreur lors du refus: ${e.message}');
+    }
+  }
+
+  /// Accepter une invitation si le locataire a déjà un compte (connexion existante)
+  Future<void> acceptInvitationWithExistingAccount({
+    required String token,
+    required String locataireId,
+  }) async {
+    try {
+      final invitation = await getInvitationByToken(token);
+      if (invitation == null) throw Exception('Invitation non trouvée');
+      if (!invitation.canBeAccepted) {
+        if (invitation.isExpired) throw Exception('Cette invitation a expiré');
+        throw Exception('Cette invitation n\'est plus valide');
+      }
+
+      // Créer le contrat
+      await _appwriteService.createDocument(
+        collectionId: Environment.contratsCollectionId,
+        data: {
+          'bienId': invitation.bienId,
+          'locataireId': locataireId,
+          'proprietaireId': invitation.proprietaireId,
+          'dateDebut': DateTime.now().toIso8601String(),
+          'dateFin': null,
+          'loyerMensuel': invitation.loyerMensuel,
+          'charges': invitation.charges ?? 0,
+          'caution': 0,
+          'jourPaiement': 1,
+          'statut': 'actif',
+          'documentUrl': null,
+          'notes': invitation.message,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        permissions: [
+          Permission.read(Role.user(locataireId)),
+          Permission.read(Role.user(invitation.proprietaireId)),
+          Permission.update(Role.user(invitation.proprietaireId)),
+        ],
+      );
+
+      // Mettre à jour l'invitation et le bien
+      await _appwriteService.updateDocument(
+        collectionId: Environment.invitationsCollectionId,
+        documentId: invitation.id!,
+        data: {'statut': 'accepted'},
+      );
+
+      await _appwriteService.updateDocument(
+        collectionId: Environment.biensCollectionId,
+        documentId: invitation.bienId,
+        data: {
+          'locataireId': locataireId,
+          'statut': 'occupe',
+          'updatedAt': DateTime.now().toIso8601String()
+        },
+      );
+    } on AppwriteException catch (e) {
+      throw Exception('Erreur lors de l\'acceptation: ${e.message}');
     }
   }
 
@@ -403,7 +618,7 @@ class InvitationService {
       final bien = BienModel.fromAppwrite(bienDoc);
 
       // Créer une nouvelle invitation
-      return await createInvitation(
+      final result = await createInvitation(
         bien: bien,
         emailLocataire: oldInvitation.emailLocataire,
         nomLocataire: oldInvitation.nomLocataire,
@@ -411,6 +626,7 @@ class InvitationService {
         telephoneLocataire: oldInvitation.telephoneLocataire,
         message: oldInvitation.message,
       );
+      return result.invitation;
     } on AppwriteException catch (e) {
       throw Exception('Erreur lors du renvoi: ${e.message}');
     }

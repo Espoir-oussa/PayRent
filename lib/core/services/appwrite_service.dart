@@ -108,6 +108,42 @@ class AppwriteService {
     await _account.deleteSession(sessionId: 'current');
   }
 
+  /// Mettre à jour le mot de passe de l'utilisateur connecté
+  Future<void> updatePassword({
+    required String newPassword,
+    required String oldPassword,
+  }) async {
+    await _account.updatePassword(
+      password: newPassword,
+      oldPassword: oldPassword,
+    );
+  }
+
+  /// Demander un email de récupération de mot de passe (Appwrite)
+  Future<void> createRecovery({
+    required String email,
+    required String url,
+  }) async {
+    await _account.createRecovery(
+      email: email,
+      url: url,
+    );
+  }
+
+  /// Supprimer définitivement le compte utilisateur (Auth)
+  /// Attention: Cette action est irréversible
+  Future<void> deleteCurrentAccount() async {
+    try {
+      // Utiliser updateStatus pour désactiver le compte
+      // Note: La suppression complète nécessite les droits admin côté serveur
+      // Pour une vraie suppression, il faudrait une Cloud Function Appwrite
+      await _account.updateStatus();
+    } catch (e) {
+      // Si updateStatus échoue, on continue (le compte sera au moins déconnecté)
+      rethrow;
+    }
+  }
+
   /// Récupérer l'utilisateur actuellement connecté
   Future<models.User?> getCurrentUser() async {
     try {
