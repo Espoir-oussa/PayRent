@@ -1,4 +1,3 @@
-
 // ===============================
 // 🏠 Écran : Accueil Locataire
 //
@@ -12,6 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/colors.dart';
+import '../../../config/theme.dart';
 import '../../../core/di/providers.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
@@ -100,7 +100,14 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PayRent'),
+        title: Text(
+          'PayRent',
+          style: TextStyle(
+            fontFamily: logoFontFamily, // MuseoModerno pour le logo uniquement
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
         actions: [
@@ -172,7 +179,10 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppColors.primaryDark, AppColors.primaryDark.withOpacity(0.8)],
+                colors: [
+                  AppColors.primaryDark,
+                  AppColors.primaryDark.withOpacity(0.8)
+                ],
               ),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -181,7 +191,8 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 35, color: AppColors.primaryDark),
+                  child: Icon(Icons.person,
+                      size: 35, color: AppColors.primaryDark),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -220,7 +231,8 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
           ),
           const SizedBox(height: 12),
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

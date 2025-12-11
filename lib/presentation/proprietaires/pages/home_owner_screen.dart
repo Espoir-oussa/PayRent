@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../config/colors.dart';
 import 'bien_management_screen.dart';
 import 'complaint_tracking_screen.dart';
@@ -28,21 +29,21 @@ class HomeOwnerScreen extends ConsumerStatefulWidget {
 
 class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
   int _currentIndex = 0;
-  
+
   final List<Widget> _screens = [
     const BienManagementScreen(),
     const ComplaintTrackingScreen(),
     const PaymentHistoryScreen(),
     const InvoicingScreen(),
   ];
-  
+
   final List<IconData> _bottomIcons = [
     Icons.home_work_outlined,
     Icons.report_problem_outlined,
     Icons.payments_outlined,
     Icons.receipt_long_outlined,
   ];
-  
+
   final List<String> _bottomLabels = [
     'Biens',
     'Plaintes',
@@ -207,10 +208,10 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
     try {
       // Déconnexion Appwrite
       await AppwriteService().logout();
-      
+
       // Reset du state local
       ref.read(ownerLoginControllerProvider.notifier).resetState();
-      
+
       // Redirection vers la page de login
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
@@ -260,14 +261,12 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         selectedItemColor: AppColors.accentRed,
         unselectedItemColor: Colors.grey.shade600,
         elevation: 0,
-        selectedLabelStyle: const TextStyle(
+        selectedLabelStyle: GoogleFonts.poppins(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          fontFamily: 'MuseoModerno',
         ),
-        unselectedLabelStyle: const TextStyle(
+        unselectedLabelStyle: GoogleFonts.poppins(
           fontSize: 10,
-          fontFamily: 'MuseoModerno',
         ),
         items: List.generate(_bottomIcons.length, (index) {
           return BottomNavigationBarItem(

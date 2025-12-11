@@ -13,6 +13,7 @@ import '../services/api_service.dart';
 import '../services/appwrite_service.dart';
 import '../services/image_upload_service.dart';
 import '../services/invitation_service.dart';
+import '../services/password_reset_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -60,13 +61,23 @@ final invitationServiceProvider = Provider((ref) {
   return InvitationService(ref.watch(appwriteServiceProvider));
 });
 
+// Provider du service de réinitialisation de mot de passe
+final passwordResetServiceProvider = Provider((ref) {
+  return PasswordResetService(ref.watch(appwriteServiceProvider));
+});
+
 // =================================================================
 // 2. PROVIDERS DES REPOSITORIES (DATA)
 // =================================================================
 
-// Repository Auth avec Appwrite
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+// Repository Auth avec Appwrite (type concret pour accès aux méthodes spécifiques)
+final authRepositoryAppwriteProvider = Provider<AuthRepositoryAppwrite>((ref) {
   return AuthRepositoryAppwrite(ref.watch(appwriteServiceProvider));
+});
+
+// Repository Auth avec Appwrite (interface abstraite)
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return ref.watch(authRepositoryAppwriteProvider);
 });
 
 // Repository Auth Legacy (ancien - pour compatibilité si besoin)

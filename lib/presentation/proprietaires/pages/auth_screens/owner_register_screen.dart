@@ -2,10 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// import du provider déjà présent ou à garder une seule fois
+import 'package:google_fonts/google_fonts.dart';
 import 'package:payrent/presentation/proprietaires/states/owner_register_state.dart';
 import 'package:payrent/core/di/providers.dart';
 import '../../../../config/colors.dart';
+import '../../../../core/utils/error_translator.dart';
+import '../../../shared/widgets/app_toast.dart';
 import 'owner_login_screen.dart';
 
 class OwnerRegisterScreen extends StatefulWidget {
@@ -45,42 +47,37 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
     return Consumer(
       builder: (context, ref, child) {
         // On utilise directement le provider dans ref.listen et ref.read
-        ref.listen<OwnerRegisterState>(ownerRegisterControllerProvider, (previous, next) {
+        ref.listen<OwnerRegisterState>(ownerRegisterControllerProvider,
+            (previous, next) {
           if (next.status == RegisterStatus.success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Inscription réussie ! Redirection...'), backgroundColor: AppColors.accentRed),
-            );
+            AppToast.success(context, 'Inscription réussie ! Redirection...');
             Future.delayed(const Duration(milliseconds: 1500), () {
               if (mounted) {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const OwnerLoginScreen()),
+                  MaterialPageRoute(
+                      builder: (context) => const OwnerLoginScreen()),
                 );
               }
             });
           }
           if (next.status == RegisterStatus.failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erreur: ${next.errorMessage ?? "Vérifiez vos informations"}'), backgroundColor: AppColors.accentRed),
-            );
+            final errorMessage = ErrorTranslator.translate(next.errorMessage);
+            AppToast.error(context, errorMessage);
           }
         });
-        
+
         Future<void> _handleRegister() async {
           if (_formKey.currentState!.validate() && _acceptTerms) {
             ref.read(ownerRegisterControllerProvider.notifier).register(
-              email: _emailController.text.trim(),
-              password: _passwordController.text,
-              nom: _lastNameController.text,
-              prenom: _firstNameController.text,
-              telephone: _phoneController.text,
-            );
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text,
+                  nom: _lastNameController.text,
+                  prenom: _firstNameController.text,
+                  telephone: _phoneController.text,
+                );
           } else if (!_acceptTerms) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Veuillez accepter les conditions'),
-                backgroundColor: AppColors.accentRed,
-              ),
-            );
+            AppToast.warning(
+                context, 'Veuillez accepter les conditions d\'utilisation');
           }
         }
 
@@ -88,7 +85,8 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 30.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 40.0, vertical: 30.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -122,33 +120,34 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Titre principal - Style cohérent avec login
                     Text(
                       'Créer un compte',
                       textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                        color: AppColors.primaryDark,
-                        fontSize: 32,
-                        letterSpacing: 1.5,
-                      ),
+                      style:
+                          Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                color: AppColors.primaryDark,
+                                fontSize: 32,
+                                letterSpacing: 1.5,
+                              ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Sous-titre
                     Text(
                       'Rejoignez PayRent pour gérer vos biens facilement',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.primaryDark.withOpacity(0.6),
-                      ),
+                            color: AppColors.primaryDark.withOpacity(0.6),
+                          ),
                     ),
-                    
+
                     const SizedBox(height: 50),
-                    
+
                     // Formulaire
                     Form(
                       key: _formKey,
@@ -162,8 +161,10 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   controller: _firstNameController,
                                   decoration: InputDecoration(
                                     labelText: 'Prénom',
-                                    prefixIcon: const Icon(Icons.person_outline),
-                                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                                    prefixIcon:
+                                        const Icon(Icons.person_outline),
+                                    floatingLabelBehavior:
+                                        FloatingLabelBehavior.always,
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
@@ -173,15 +174,14 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   },
                                 ),
                               ),
-                              
                               const SizedBox(width: 16),
-                              
                               Expanded(
                                 child: TextFormField(
                                   controller: _lastNameController,
                                   decoration: const InputDecoration(
                                     labelText: 'Nom',
-                                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                                    floatingLabelBehavior:
+                                        FloatingLabelBehavior.always,
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
@@ -193,9 +193,9 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Email
                           TextFormField(
                             controller: _emailController,
@@ -203,21 +203,23 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Adresse Email',
                               prefixIcon: Icon(Icons.email_outlined),
-                              floatingLabelBehavior: FloatingLabelBehavior.always,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Veuillez entrer votre email';
                               }
-                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value)) {
+                              if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                                  .hasMatch(value)) {
                                 return 'Email invalide';
                               }
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Téléphone
                           TextFormField(
                             controller: _phoneController,
@@ -225,7 +227,8 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                             decoration: const InputDecoration(
                               labelText: 'Numéro de téléphone',
                               prefixIcon: Icon(Icons.phone_outlined),
-                              floatingLabelBehavior: FloatingLabelBehavior.always,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -234,9 +237,9 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Mot de passe
                           TextFormField(
                             controller: _passwordController,
@@ -252,10 +255,12 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   color: AppColors.primaryDark.withOpacity(0.5),
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscurePassword = !_obscurePassword);
+                                  setState(() =>
+                                      _obscurePassword = !_obscurePassword);
                                 },
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.always,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -267,9 +272,9 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Confirmation mot de passe
                           TextFormField(
                             controller: _confirmPasswordController,
@@ -285,10 +290,12 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   color: AppColors.primaryDark.withOpacity(0.5),
                                 ),
                                 onPressed: () {
-                                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                                  setState(() => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword);
                                 },
                               ),
-                              floatingLabelBehavior: FloatingLabelBehavior.always,
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.always,
                             ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
@@ -300,9 +307,9 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               return null;
                             },
                           ),
-                          
+
                           const SizedBox(height: 16),
-                          
+
                           // Indicateur visuel de force du mot de passe (optionnel)
                           if (_passwordController.text.isNotEmpty)
                             Column(
@@ -312,7 +319,8 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   value: _passwordController.text.isEmpty
                                       ? 0
                                       : _passwordController.text.length / 12,
-                                  backgroundColor: AppColors.primaryDark.withOpacity(0.1),
+                                  backgroundColor:
+                                      AppColors.primaryDark.withOpacity(0.1),
                                   color: _passwordController.text.length >= 8
                                       ? Colors.green
                                       : _passwordController.text.length >= 6
@@ -330,23 +338,23 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                           : _passwordController.text.length >= 6
                                               ? 'Mot de passe moyen'
                                               : 'Mot de passe faible',
-                                  style: TextStyle(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12,
-                                    fontFamily: 'MuseoModerno',
                                     color: _passwordController.text.isEmpty
                                         ? Colors.transparent
                                         : _passwordController.text.length >= 8
                                             ? Colors.green
-                                            : _passwordController.text.length >= 6
+                                            : _passwordController.text.length >=
+                                                    6
                                                 ? Colors.orange
                                                 : AppColors.accentRed,
                                   ),
                                 ),
                               ],
                             ),
-                          
+
                           const SizedBox(height: 30),
-                          
+
                           // Checkbox Conditions
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,11 +377,10 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   child: Text.rich(
                                     TextSpan(
                                       children: [
-                                        const TextSpan(
+                                        TextSpan(
                                           text: "J'accepte les ",
-                                          style: TextStyle(
+                                          style: GoogleFonts.poppins(
                                             fontSize: 14,
-                                            fontFamily: 'MuseoModerno',
                                           ),
                                         ),
                                         WidgetSpan(
@@ -383,20 +390,18 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                             },
                                             child: Text(
                                               'conditions d\'utilisation',
-                                              style: TextStyle(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 14,
-                                                fontFamily: 'MuseoModerno',
                                                 color: AppColors.accentRed,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
                                           ),
                                         ),
-                                        const TextSpan(
+                                        TextSpan(
                                           text: ' et la ',
-                                          style: TextStyle(
+                                          style: GoogleFonts.poppins(
                                             fontSize: 14,
-                                            fontFamily: 'MuseoModerno',
                                           ),
                                         ),
                                         WidgetSpan(
@@ -406,9 +411,8 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                             },
                                             child: Text(
                                               'politique de confidentialité',
-                                              style: TextStyle(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 14,
-                                                fontFamily: 'MuseoModerno',
                                                 color: AppColors.accentRed,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -422,9 +426,9 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 40),
-                          
+
                           // Bouton d'inscription
                           ElevatedButton(
                             onPressed: _isLoading ? null : _handleRegister,
@@ -440,36 +444,37 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                                   )
                                 : Text(
                                     "S'INSCRIRE",
-                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: AppColors.textLight,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: AppColors.textLight,
+                                        ),
                                   ),
                           ),
-                          
+
                           const SizedBox(height: 30),
-                          
+
                           // Lien vers login
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
-                                  builder: (context) => const OwnerLoginScreen(),
+                                  builder: (context) =>
+                                      const OwnerLoginScreen(),
                                 ),
                               );
                             },
                             child: Text.rich(
                               TextSpan(
                                 children: [
-                                  const TextSpan(
+                                  TextSpan(
                                     text: 'Déjà un compte ? ',
-                                    style: TextStyle(
-                                      fontFamily: 'MuseoModerno',
-                                    ),
+                                    style: GoogleFonts.poppins(),
                                   ),
                                   TextSpan(
                                     text: 'Se connecter',
-                                    style: TextStyle(
-                                      fontFamily: 'MuseoModerno',
+                                    style: GoogleFonts.poppins(
                                       color: AppColors.primaryDark,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.underline,
@@ -479,7 +484,7 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
                               ),
                             ),
                           ),
-                          
+
                           const SizedBox(height: 20),
                         ],
                       ),

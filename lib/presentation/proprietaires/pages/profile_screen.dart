@@ -31,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isUploadingImage = false;
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
@@ -512,6 +513,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             _isSaving ? 'Enregistrement...' : 'Enregistrer'),
                       ),
                     ),
+                    const SizedBox(height: 24),
+
+                    // Bouton Déconnexion
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoggingOut ? null : _logout,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade400),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: _isLoggingOut
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.grey.shade700),
+                                ),
+                              )
+                            : const Icon(Icons.logout_outlined),
+                        label: Text(_isLoggingOut
+                            ? 'Déconnexion...'
+                            : 'Se déconnecter'),
+                      ),
+                    ),
                     const SizedBox(height: 48),
 
                     // Section danger
@@ -593,6 +625,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
         fillColor: Colors.grey.shade50,
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    try {
+      setState(() => _isLoggingOut = true);
+
+      await _appwriteService.logout();
+
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/login_owner', (route) => false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la déconnexion: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoggingOut = false);
+      }
+    }
   }
 
   String _getInitials() {

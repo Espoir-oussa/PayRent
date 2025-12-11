@@ -47,6 +47,7 @@ dependencies:
   
   # HTTP client pour les appels API (EmailService)
   http: ^1.2.1
+  google_fonts: ^6.3.3
 
 dev_dependencies:
   flutter_test:

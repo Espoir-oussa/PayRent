@@ -9,15 +9,15 @@ import 'package:http/http.dart' as http;
 class EmailConfig {
   // ⚠️ IMPORTANT: En production, stockez ces clés de manière sécurisée
   // (variables d'environnement, Appwrite Functions, ou backend sécurisé)
-  
+
   // Resend API - Service principal
   static const String resendApiKey = 're_ZzgufrTg_2D3iVhiL5a37ry1uxDd5BKtV';
   static const String resendApiUrl = 'https://api.resend.com/emails';
-  
+
   // Expéditeur (doit être un domaine vérifié sur Resend)
   static const String senderEmail = 'contact@igoradande.me';
   static const String senderName = 'PayRent';
-  
+
   // URLs de l'application
   static const String appScheme = 'payrent';
   static const String webBaseUrl = 'https://payrent.app'; // Pour les liens web
@@ -35,12 +35,16 @@ class EmailService {
     double? charges,
     String? messagePersonnalise,
   }) async {
-    final acceptUrl = '${EmailConfig.webBaseUrl}/accept-invitation?token=$token';
-    final rejectUrl = '${EmailConfig.webBaseUrl}/reject-invitation?token=$token';
-    
+    final acceptUrl =
+        '${EmailConfig.webBaseUrl}/accept-invitation?token=$token';
+    final rejectUrl =
+        '${EmailConfig.webBaseUrl}/reject-invitation?token=$token';
+
     // Lien deep link pour l'app mobile
-    final appAcceptUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=accept';
-    final appRejectUrl = '${EmailConfig.appScheme}://accept-invitation?token=$token&action=reject';
+    final appAcceptUrl =
+        '${EmailConfig.appScheme}://accept-invitation?token=$token&action=accept';
+    final appRejectUrl =
+        '${EmailConfig.appScheme}://accept-invitation?token=$token&action=reject';
 
     final htmlContent = _buildInvitationEmailHtml(
       recipientName: recipientName,
@@ -153,16 +157,17 @@ class EmailService {
     required String appRejectUrl,
   }) {
     final loyerFormatted = loyerMensuel.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]} ',
-    );
-    
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]} ',
+        );
+
     final chargesText = charges != null && charges > 0
         ? ' + ${charges.toStringAsFixed(0)} FCFA de charges'
         : '';
 
-    final messageSection = messagePersonnalise != null && messagePersonnalise.isNotEmpty
-        ? '''
+    final messageSection =
+        messagePersonnalise != null && messagePersonnalise.isNotEmpty
+            ? '''
         <div style="background-color: #f5f5f5; border-radius: 12px; padding: 20px; margin: 25px 0;">
           <p style="margin: 0 0 10px 0; font-size: 14px; color: #666; font-style: italic;">
             💬 Message de $proprietaireNom :
@@ -172,7 +177,7 @@ class EmailService {
           </p>
         </div>
         '''
-        : '';
+            : '';
 
     return '''
 <!DOCTYPE html>
@@ -287,6 +292,19 @@ PayRent - Gestion locative simplifiée
 ''';
   }
 
+  /// Envoie un email personnalisé
+  Future<bool> sendCustomEmail({
+    required String to,
+    required String subject,
+    required String htmlContent,
+  }) async {
+    return await _sendWithResend(
+      to: to,
+      subject: subject,
+      htmlContent: htmlContent,
+    );
+  }
+
   /// Envoie l'email via Resend API
   Future<bool> _sendWithResend({
     required String to,
@@ -300,7 +318,7 @@ PayRent - Gestion locative simplifiée
 
     try {
       debugPrint('📧 Envoi email à $to via Resend...');
-      
+
       final response = await http.post(
         Uri.parse(EmailConfig.resendApiUrl),
         headers: {
@@ -315,7 +333,14 @@ PayRent - Gestion locative simplifiée
         }),
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        debugPrint('✅ Email envoyé avec succès à $to');
+        return true;
+      } else {
+        debugPrint(
+            '❌ Erreur envoi email: ${response.statusCode} - ${response.body}');
+        return false;
+      }
     } catch (e) {
       debugPrint('❌ Exception Resend: $e');
       return false;
