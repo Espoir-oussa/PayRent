@@ -276,7 +276,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
             child: Icon(Icons.system_update, color: Colors.green.shade700),
           ),
           const SizedBox(width: 12),
-          const Text('Mise à jour disponible'),
+          // Permettre au texte de se réduire/filmer si espace limité
+          const Expanded(
+            child: Text(
+              'Mise à jour disponible',
+              softWrap: true,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
       content: SingleChildScrollView(

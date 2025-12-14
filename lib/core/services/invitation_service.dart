@@ -3,6 +3,7 @@
 
 import 'dart:math';
 import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart' as models;
 import 'package:flutter/foundation.dart';
 import '../../config/environment.dart';
 import '../../data/models/invitation_model.dart';
@@ -289,27 +290,45 @@ class InvitationService {
       );
 
       // 4. Créer le profil utilisateur dans la collection users
-      final userDoc = await _appwriteService.createDocument(
-        collectionId: Environment.usersCollectionId,
-        documentId: user.$id,
-        data: {
-          'email': invitation.emailLocataire,
-          'nom': nom,
-          'prenom': prenom,
-          'telephone': telephone ?? invitation.telephoneLocataire ?? '',
-          'role': 'locataire',
-          'adresse': '',
-          'photoUrl': '',
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-        permissions: [
-          Permission.read(Role.user(user.$id)),
-          Permission.update(Role.user(user.$id)),
-          // Le propriétaire peut aussi lire le profil
-          Permission.read(Role.user(invitation.proprietaireId)),
-        ],
-      );
+      Map<String, dynamic> userDocData = {
+        'email': invitation.emailLocataire,
+        'nom': nom,
+        'prenom': prenom,
+        'telephone': telephone ?? invitation.telephoneLocataire ?? '',
+        'role': 'locataire',
+        'adresse': '',
+        'photoUrl': '',
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      };
+
+      late models.Document createdUserDoc;
+      try {
+        final userDoc = await _appwriteService.createDocument(
+          collectionId: Environment.usersCollectionId,
+          documentId: user.$id,
+          data: userDocData,
+          permissions: [
+            Permission.read(Role.user(user.$id)),
+            Permission.update(Role.user(user.$id)),
+            // Le propriétaire peut aussi lire le profil
+            Permission.read(Role.user(invitation.proprietaireId)),
+          ],
+        );
+        createdUserDoc = userDoc;
+      } on AppwriteException catch (e) {
+        final message = e.message?.toLowerCase() ?? '';
+        if (e.code == 409 || message.contains('already') || message.contains('requested id')) {
+          // Document existant : récupérer et continuer
+          final existing = await _appwriteService.getDocument(
+            collectionId: Environment.usersCollectionId,
+            documentId: user.$id,
+          );
+          createdUserDoc = existing;
+        } else {
+          rethrow;
+        }
+      }
 
       // 5. Créer le contrat de location
       await _appwriteService.createDocument(
@@ -355,7 +374,7 @@ class InvitationService {
         },
       );
 
-      return UserModel.fromAppwrite(userDoc, user.$id);
+      return UserModel.fromAppwrite(createdUserDoc, user.$id);
     } on AppwriteException catch (e) {
       throw Exception('Erreur lors de l\'acceptation: ${e.message}');
     }
@@ -391,27 +410,40 @@ class InvitationService {
         await _appwriteService.login(email: invitation.emailLocataire, password: temporaryPassword);
 
         // Créer le profil utilisateur
-        final userDoc = await _appwriteService.createDocument(
-          collectionId: Environment.usersCollectionId,
-          documentId: user.$id,
-          data: {
-            'email': invitation.emailLocataire,
-            'nom': nom,
-            'prenom': prenom,
-            'telephone': invitation.telephoneLocataire ?? '',
-            'role': 'locataire',
-            'adresse': '',
-            'photoUrl': '',
-            'mustChangePassword': true,
-            'createdAt': DateTime.now().toIso8601String(),
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
-          permissions: [
-            Permission.read(Role.user(user.$id)),
-            Permission.update(Role.user(user.$id)),
-            Permission.read(Role.user(invitation.proprietaireId)),
-          ],
-        );
+        late models.Document userDoc;
+        try {
+          userDoc = await _appwriteService.createDocument(
+            collectionId: Environment.usersCollectionId,
+            documentId: user.$id,
+            data: {
+              'email': invitation.emailLocataire,
+              'nom': nom,
+              'prenom': prenom,
+              'telephone': invitation.telephoneLocataire ?? '',
+              'role': 'locataire',
+              'adresse': '',
+              'photoUrl': '',
+              'mustChangePassword': true,
+              'createdAt': DateTime.now().toIso8601String(),
+              'updatedAt': DateTime.now().toIso8601String(),
+            },
+            permissions: [
+              Permission.read(Role.user(user.$id)),
+              Permission.update(Role.user(user.$id)),
+              Permission.read(Role.user(invitation.proprietaireId)),
+            ],
+          );
+        } on AppwriteException catch (e) {
+          final message = e.message?.toLowerCase() ?? '';
+          if (e.code == 409 || message.contains('already') || message.contains('requested id')) {
+            userDoc = await _appwriteService.getDocument(
+              collectionId: Environment.usersCollectionId,
+              documentId: user.$id,
+            );
+          } else {
+            rethrow;
+          }
+        }
 
         // Créer le contrat
         await _appwriteService.createDocument(

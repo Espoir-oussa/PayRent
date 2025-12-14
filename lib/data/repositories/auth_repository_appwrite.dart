@@ -79,27 +79,40 @@ class AuthRepositoryAppwrite implements AuthRepository {
       await _appwriteService.login(email: email, password: password);
 
       // 3. Créer le profil utilisateur dans la base de données
-      final userDoc = await _appwriteService.createDocument(
-        collectionId: Environment.usersCollectionId,
-        documentId: user.$id, // Utiliser le même ID que le compte
-        data: {
-          'email': email,
-          'nom': nom,
-          'prenom': prenom,
-          'telephone': telephone ?? '',
-          'role': 'proprietaire',
-          'adresse': '',
-          'photoUrl': '',
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-        permissions: [
-          Permission.read(Role.user(user.$id)),
-          Permission.update(Role.user(user.$id)),
-        ],
-      );
+      try {
+        final userDoc = await _appwriteService.createDocument(
+          collectionId: Environment.usersCollectionId,
+          documentId: user.$id, // Utiliser le même ID que le compte
+          data: {
+            'email': email,
+            'nom': nom,
+            'prenom': prenom,
+            'telephone': telephone ?? '',
+            'role': 'proprietaire',
+            'adresse': '',
+            'photoUrl': '',
+            'createdAt': DateTime.now().toIso8601String(),
+            'updatedAt': DateTime.now().toIso8601String(),
+          },
+          permissions: [
+            Permission.read(Role.user(user.$id)),
+            Permission.update(Role.user(user.$id)),
+          ],
+        );
 
-      return UserModel.fromAppwrite(userDoc, user.$id);
+        return UserModel.fromAppwrite(userDoc, user.$id);
+      } on AppwriteException catch (e) {
+        // Si le document existe déjà (conflit), récupérer le document existant
+        final message = e.message?.toLowerCase() ?? '';
+        if (e.code == 409 || message.contains('already') || message.contains('requested id')) {
+          final existing = await _appwriteService.getDocument(
+            collectionId: Environment.usersCollectionId,
+            documentId: user.$id,
+          );
+          return UserModel.fromAppwrite(existing, user.$id);
+        }
+        throw Exception('Erreur d\'inscription: ${e.message}');
+      }
     } on AppwriteException catch (e) {
       throw Exception('Erreur d\'inscription: ${e.message}');
     }
@@ -123,22 +136,39 @@ class AuthRepositoryAppwrite implements AuthRepository {
           final prenom = nameParts.isNotEmpty ? nameParts.first : '';
           final nom = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-          final doc = await _appwriteService.createDocument(
-            collectionId: Environment.usersCollectionId,
-            documentId: userId,
-            data: {
-              'email': user.email,
-              'nom': nom,
-              'prenom': prenom,
-              'type_role': 'proprietaire',
-              'date_creation': DateTime.now().toIso8601String(),
-            },
-            permissions: [
-              Permission.read(Role.user(userId)),
-              Permission.update(Role.user(userId)),
-            ],
-          );
-          return UserModel.fromAppwrite(doc, userId);
+          try {
+            final doc = await _appwriteService.createDocument(
+              collectionId: Environment.usersCollectionId,
+              documentId: userId,
+              data: {
+                'email': user.email,
+                'nom': nom,
+                'prenom': prenom,
+                'telephone': '',
+                'role': 'proprietaire',
+                'adresse': '',
+                'photoUrl': '',
+                'createdAt': DateTime.now().toIso8601String(),
+                'updatedAt': DateTime.now().toIso8601String(),
+              },
+              permissions: [
+                Permission.read(Role.user(userId)),
+                Permission.update(Role.user(userId)),
+              ],
+            );
+            return UserModel.fromAppwrite(doc, userId);
+          } on AppwriteException catch (e) {
+            final message = e.message?.toLowerCase() ?? '';
+            // Si conflit (document déjà créé par une autre requête concurrente), récupérer le document existant
+            if (e.code == 409 || message.contains('already') || message.contains('requested id')) {
+              final existing = await _appwriteService.getDocument(
+                collectionId: Environment.usersCollectionId,
+                documentId: userId,
+              );
+              return UserModel.fromAppwrite(existing, userId);
+            }
+            rethrow;
+          }
         }
       }
       throw Exception('Erreur récupération profil: ${e.message}');

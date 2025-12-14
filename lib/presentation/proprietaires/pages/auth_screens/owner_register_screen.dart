@@ -9,6 +9,7 @@ import '../../../../config/colors.dart';
 import '../../../../core/utils/error_translator.dart';
 import '../../../shared/widgets/app_toast.dart';
 import 'owner_login_screen.dart';
+import '../home_owner_screen.dart';
 
 class OwnerRegisterScreen extends StatefulWidget {
   const OwnerRegisterScreen({super.key});
@@ -49,13 +50,20 @@ class _OwnerRegisterScreenState extends State<OwnerRegisterScreen> {
         // On utilise directement le provider dans ref.listen et ref.read
         ref.listen<OwnerRegisterState>(ownerRegisterControllerProvider,
             (previous, next) {
+          // Gérer l'indicateur de chargement
+          if (next.status == RegisterStatus.loading) {
+            if (mounted) setState(() => _isLoading = true);
+          } else {
+            if (mounted) setState(() => _isLoading = false);
+          }
+
           if (next.status == RegisterStatus.success) {
             AppToast.success(context, 'Inscription réussie ! Redirection...');
-            Future.delayed(const Duration(milliseconds: 1500), () {
+            Future.delayed(const Duration(milliseconds: 700), () {
               if (mounted) {
+                // Rediriger directement vers l'espace propriétaire (home)
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                      builder: (context) => const OwnerLoginScreen()),
+                  MaterialPageRoute(builder: (context) => const HomeOwnerScreen()),
                 );
               }
             });
