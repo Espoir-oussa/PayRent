@@ -1,0 +1,259 @@
+// Fichier : lib/presentation/proprietaires/pages/auth_screens/owner_login_screen.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../states/owner_login_state.dart';
+import '../../../../config/colors.dart';
+import '../../../../core/di/providers.dart';
+import '../../../../core/utils/error_translator.dart';
+import '../../../shared/widgets/app_toast.dart';
+import '../home_owner_screen.dart';
+import 'forgot_password_screen.dart';
+import 'owner_register_screen.dart';
+
+class OwnerLoginScreen extends ConsumerStatefulWidget {
+  const OwnerLoginScreen({super.key});
+
+  @override
+  ConsumerState<OwnerLoginScreen> createState() => _OwnerLoginScreenState();
+}
+
+class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Écouter l'état du contrôleur
+    final loginState = ref.watch(ownerLoginControllerProvider);
+
+    // Écouter les changements d'état
+    ref.listen<OwnerLoginState>(ownerLoginControllerProvider, (previous, next) {
+      if (next.status == LoginStatus.success) {
+        AppToast.success(context, 'Connexion réussie !');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeOwnerScreen()),
+        );
+      }
+      if (next.status == LoginStatus.failure) {
+        final errorMessage = ErrorTranslator.translate(next.errorMessage);
+        AppToast.error(context, errorMessage);
+      }
+    });
+
+    // Fonction de soumission
+    void handleLogin() {
+      if (loginState.status != LoginStatus.loading) {
+        ref.read(ownerLoginControllerProvider.notifier).login(
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            );
+      }
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 40.0, vertical: 24.0), // Reduced vertical padding
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Logo en haut - taille réduite
+              const SizedBox(height: 20), // Small top spacing
+              Align(
+                child: Image.asset(
+                  'assets/images/payrent_blanc.png',
+                  height: 150, // Reduced from 150
+                  color: AppColors.primaryDark,
+                ),
+              ),
+
+              const SizedBox(height: 5), // Reduced from 60
+
+              // Sous-titre
+              Text(
+                'Gérez vos biens et vos locataires.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.primaryDark.withOpacity(0.6),
+                      fontSize: 16, // Slightly larger for better readability
+                    ),
+              ),
+              const SizedBox(height: 40), // Reduced from 60
+
+              // CHAMP EMAIL
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                ),
+                onFieldSubmitted: (_) => handleLogin(),
+              ),
+              const SizedBox(height: 20), // Reduced from 30
+
+              // CHAMP MOT DE PASSE avec icône de visibilité
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  labelText: 'Mot de passe',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: AppColors.primaryDark.withOpacity(0.5),
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
+                  ),
+                  floatingLabelBehavior: FloatingLabelBehavior.always,
+                ),
+                onFieldSubmitted: (_) => handleLogin(),
+              ),
+              const SizedBox(height: 12), // Reduced from 20
+
+              // Lien Mot de Passe Oublié
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'Mot de passe oublié ?',
+                    style: GoogleFonts.poppins(
+                      color: AppColors.accentRed,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14, // Slightly smaller
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30), // Reduced from 50
+
+              // BOUTON DE CONNEXION
+              SizedBox(
+                height: 52, // Slightly taller button for better touch target
+                child: ElevatedButton(
+                  onPressed: loginState.status == LoginStatus.loading
+                      ? null
+                      : handleLogin,
+                  style: Theme.of(context).elevatedButtonTheme.style,
+                  child: loginState.status == LoginStatus.loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.textLight,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'SE CONNECTER',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppColors.textLight,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 30), // Reduced from 40
+
+              // Séparateur plus discret
+              Row(
+                children: [
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.primaryDark
+                          .withOpacity(0.15), // More subtle
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12), // Reduced padding
+                    child: Text(
+                      'ou',
+                      style: GoogleFonts.poppins(
+                        color: AppColors.primaryDark
+                            .withOpacity(0.4), // More subtle
+                        fontSize: 13, // Smaller
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Divider(
+                      color: AppColors.primaryDark
+                          .withOpacity(0.15), // More subtle
+                      thickness: 1,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30), // Reduced from 40
+
+              // Lien Créer un Compte
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const OwnerRegisterScreen()),
+                  );
+                },
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: "Vous n'avez pas de compte ? ",
+                        style: GoogleFonts.poppins(
+                          color: AppColors.primaryDark,
+                          fontSize: 14, // Consistent size
+                        ),
+                      ),
+                      TextSpan(
+                        text: "S'inscrire",
+                        style: GoogleFonts.poppins(
+                          color: AppColors.accentRed,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14, // Consistent size
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20), // Small bottom padding
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
