@@ -57,6 +57,8 @@ dependencies:
 
   # Image picker
   image_picker: ^1.1.0
+  # Cached network image for faster image loading and caching
+  cached_network_image: ^3.2.3
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +66,8 @@ dev_dependencies:
 
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.13.1
+
+  flutter_native_splash: ^2.3.11
 
 flutter:
   uses-material-design: true
@@ -81,3 +85,15 @@ flutter_icons:
   android: true
   ios: true
   image_path: "assets/icones/app_icon.png"
+
+
+flutter_native_splash:
+  # CHANGEZ CETTE LIGNE : Couleur TRANSPARENTE
+  color: "#FFFFFF"  # 000000 + 00 (alpha 0% = invisible)
+  
+  # COMMENTEZ ou SUPPRIMEZ la ligne image :
+  # image: "assets/images/payrent_marron.png"
+  
+  android: true
+  ios: true
+  web: true

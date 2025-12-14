@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/colors.dart';
 import '../../../core/di/providers.dart';
 import '../../../data/models/bien_model.dart';
@@ -29,6 +31,36 @@ class BienManagementScreen extends ConsumerStatefulWidget {
 
 class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
   bool _isLoading = false;
+  final Set<String> _prefetched = {};
+
+  void _prefetchThumbnails(List<BienModel> biens) {
+    final imageService = ref.read(imageUploadServiceProvider);
+    for (var i = 0; i < biens.length && i < 6; i++) {
+      final b = biens[i];
+      if (b.photosUrls != null && b.photosUrls!.isNotEmpty) {
+        final src = b.photosUrls!.first;
+        try {
+          if (src.startsWith('http')) {
+            final fileId = imageService.extractFileIdFromUrl(src);
+            final url = fileId != null
+                ? imageService.getFilePreviewUrl(fileId, width: 400)
+                : src;
+            if (!_prefetched.contains(url)) {
+              precacheImage(CachedNetworkImageProvider(url), context);
+              _prefetched.add(url);
+            }
+          } else {
+            if (!_prefetched.contains(src)) {
+              precacheImage(FileImage(File(src)), context);
+              _prefetched.add(src);
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+    }
+  }
 
   final List<String> _typesBien = [
     'appartement',
@@ -109,6 +141,13 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         setState(() => _isLoading = true);
         final bienRepository = ref.read(bienRepositoryProvider);
         await bienRepository.deleteBien(bien.appwriteId!);
+        // Clear local cache for this user so list is refreshed immediately
+        final userId = await ref.read(currentUserIdProvider.future);
+        if (userId != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('proprietaire_biens_$userId');
+          await prefs.remove('proprietaire_biens_${userId}_time');
+        }
         ref.invalidate(proprietaireBiensProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -248,13 +287,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                             : imagePath != null
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(14),
-                                    child: Image.file(
-                                      File(imagePath!),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      errorBuilder: (_, __, ___) =>
-                                          _buildImagePlaceholder(),
-                                    ),
+                                    child: _buildImageFromSource(
+                                        imagePath!,
+                                        fit: BoxFit.cover),
                                   )
                                 : _buildImagePlaceholder(),
                       ),
@@ -437,6 +472,22 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
       final userId = await ref.read(currentUserIdProvider.future);
       if (userId == null) throw Exception('Utilisateur non connecté');
 
+      String? uploadedUrl;
+      if (imagePath != null) {
+        // If imagePath is already a remote URL, keep it. Otherwise upload.
+        if (imagePath.startsWith('http')) {
+          uploadedUrl = imagePath;
+        } else {
+          final imageService = ref.read(imageUploadServiceProvider);
+          uploadedUrl = await imageService.uploadImage(
+            filePath: imagePath,
+            folder: 'biens',
+            userId: userId,
+          );
+          debugPrint('Image téléversée (update): $uploadedUrl');
+        }
+      }
+
       final updatedBien = BienModel(
         appwriteId: bienId,
         proprietaireId: userId,
@@ -446,12 +497,16 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         description: description ?? '',
         loyerMensuel: loyer,
         statut: 'disponible',
-        photosUrls: imagePath != null ? [imagePath] : null,
+        photosUrls: uploadedUrl != null ? [uploadedUrl] : null,
         updatedAt: DateTime.now(),
       );
 
       final bienRepository = ref.read(bienRepositoryProvider);
       await bienRepository.updateBien(bienId, updatedBien);
+      // Clear cache so changes appear immediately
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('proprietaire_biens_$userId');
+      await prefs.remove('proprietaire_biens_${userId}_time');
       ref.invalidate(proprietaireBiensProvider);
 
       if (mounted) {
@@ -737,6 +792,21 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
 
       debugPrint('🏠 Création bien avec proprietaireId: $userId');
 
+      String? uploadedUrl;
+      if (imagePath != null) {
+        if (imagePath.startsWith('http')) {
+          uploadedUrl = imagePath;
+        } else {
+          final imageService = ref.read(imageUploadServiceProvider);
+          uploadedUrl = await imageService.uploadImage(
+            filePath: imagePath,
+            folder: 'biens',
+            userId: userId,
+          );
+          debugPrint('Image téléversée: $uploadedUrl');
+        }
+      }
+
       final bien = BienModel(
         proprietaireId: userId,
         nom: nom,
@@ -745,13 +815,17 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         description: description ?? '',
         loyerMensuel: loyer,
         statut: 'disponible',
-        photosUrls: imagePath != null ? [imagePath] : null,
+        photosUrls: uploadedUrl != null ? [uploadedUrl] : null,
         createdAt: DateTime.now(),
       );
 
       final bienRepository = ref.read(bienRepositoryProvider);
       await bienRepository.createBien(bien);
 
+      // Clear local cache so new bien appears immediately
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('proprietaire_biens_$userId');
+      await prefs.remove('proprietaire_biens_${userId}_time');
       // Rafraîchir la liste des biens
       ref.invalidate(proprietaireBiensProvider);
 
@@ -936,27 +1010,16 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  bien.photosUrls != null && bien.photosUrls!.isNotEmpty
-                      ? Image.file(
-                          File(bien.photosUrls!.first),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppColors.primaryDark.withOpacity(0.1),
-                            child: Icon(
-                              Icons.home,
-                              size: 50,
-                              color: AppColors.primaryDark.withOpacity(0.5),
-                            ),
-                          ),
-                        )
-                      : Container(
-                          color: AppColors.primaryDark.withOpacity(0.1),
-                          child: Icon(
-                            Icons.home,
-                            size: 50,
-                            color: AppColors.primaryDark.withOpacity(0.5),
-                          ),
-                        ),
+                          bien.photosUrls != null && bien.photosUrls!.isNotEmpty
+                              ? _buildImageFromSource(bien.photosUrls!.first, isThumbnail: true)
+                            : Container(
+                                color: AppColors.primaryDark.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.home,
+                                  size: 50,
+                                  color: AppColors.primaryDark.withOpacity(0.5),
+                                ),
+                              ),
                   // Badge type
                   Positioned(
                     top: 8,
@@ -1105,6 +1168,65 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     return const Center(child: CircularProgressIndicator());
   }
 
+  Widget _buildImageFromSource(String src, {BoxFit fit = BoxFit.cover, bool isThumbnail = false}) {
+    // If it's a remote URL, use Image.network
+    final isUrl = src.startsWith('http://') || src.startsWith('https://');
+    if (isUrl) {
+      try {
+        // Try to use Appwrite preview URL for thumbnails
+        final imageService = ref.read(imageUploadServiceProvider);
+        final fileId = imageService.extractFileIdFromUrl(src);
+        String displayUrl = src;
+        if (isThumbnail && fileId != null) {
+          displayUrl = imageService.getFilePreviewUrl(fileId, width: 400);
+        }
+
+        return CachedNetworkImage(
+          imageUrl: displayUrl,
+          fit: fit,
+          placeholder: (context, url) => Container(
+            color: AppColors.primaryDark.withOpacity(0.1),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: AppColors.primaryDark.withOpacity(0.1),
+            child: Icon(
+              Icons.home,
+              size: 50,
+              color: AppColors.primaryDark.withOpacity(0.5),
+            ),
+          ),
+        );
+      } catch (_) {
+        return Image.network(src, fit: fit);
+      }
+    }
+
+    // Otherwise try local file
+    try {
+      final file = File(src);
+      if (file.existsSync()) {
+        return Image.file(file, fit: fit, errorBuilder: (_, __, ___) => Container(
+          color: AppColors.primaryDark.withOpacity(0.1),
+          child: Icon(
+            Icons.home,
+            size: 50,
+            color: AppColors.primaryDark.withOpacity(0.5),
+          ),
+        ));
+      }
+    } catch (_) {}
+
+    return Container(
+      color: AppColors.primaryDark.withOpacity(0.1),
+      child: Icon(
+        Icons.home,
+        size: 50,
+        color: AppColors.primaryDark.withOpacity(0.5),
+      ),
+    );
+  }
+
   Widget _buildErrorState(String error) {
     if (_isConnectionError(error)) {
       // Naviguer vers la page NoConnectionPage
@@ -1167,6 +1289,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         children: [
           biensAsync.when(
             data: (biens) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _prefetchThumbnails(biens);
+              });
               if (biens.isEmpty) {
                 return _buildEmptyState();
               }

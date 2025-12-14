@@ -57,6 +57,7 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.accentRed,
         foregroundColor: AppColors.textLight,
+        automaticallyImplyLeading: false,
         elevation: 4,
         toolbarHeight: 80,
         title: SizedBox(

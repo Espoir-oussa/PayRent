@@ -12,6 +12,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/colors.dart';
 import '../../../data/models/bien_model.dart';
 import '../../../data/models/invitation_model.dart';
@@ -100,6 +101,65 @@ class _BienDetailScreenState extends ConsumerState<BienDetailScreen>
       'terrain': 'Terrain',
     };
     return map[type] ?? type;
+  }
+
+  Widget _buildImageFromSource(String src, {BoxFit fit = BoxFit.cover, bool isThumbnail = false}) {
+    final isUrl = src.startsWith('http://') || src.startsWith('https://');
+    if (isUrl) {
+      try {
+        final imageService = ref.read(imageUploadServiceProvider);
+        final fileId = imageService.extractFileIdFromUrl(src);
+        final displayUrl = fileId != null
+          ? imageService.getFilePreviewUrl(fileId, width: isThumbnail ? 400 : 1200)
+          : src;
+
+        return CachedNetworkImage(
+          imageUrl: displayUrl,
+          fit: fit,
+          placeholder: (context, url) => Container(
+            color: AppColors.primaryDark.withOpacity(0.3),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: AppColors.primaryDark.withOpacity(0.3),
+            child: const Icon(
+              Icons.home,
+              size: 80,
+              color: Colors.white54,
+            ),
+          ),
+        );
+      } catch (_) {
+        return Image.network(src, fit: fit);
+      }
+    }
+
+    try {
+      final file = File(src);
+      if (file.existsSync()) {
+        return Image.file(
+          file,
+          fit: fit,
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.primaryDark.withOpacity(0.3),
+            child: const Icon(
+              Icons.home,
+              size: 80,
+              color: Colors.white54,
+            ),
+          ),
+        );
+      }
+    } catch (_) {}
+
+    return Container(
+      color: AppColors.primaryDark.withOpacity(0.3),
+      child: const Icon(
+        Icons.home,
+        size: 80,
+        color: Colors.white54,
+      ),
+    );
   }
 
   String _formatMontant(double montant) {
@@ -260,34 +320,13 @@ class _BienDetailScreenState extends ConsumerState<BienDetailScreen>
                 expandedHeight: 250,
                 pinned: true,
                 backgroundColor: AppColors.primaryDark,
-                leading: IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                leading: BackButton(color: Colors.white),
                 flexibleSpace: FlexibleSpaceBar(
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
                       bien.photosUrls != null && bien.photosUrls!.isNotEmpty
-                          ? Image.file(
-                              File(bien.photosUrls!.first),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: AppColors.primaryDark.withOpacity(0.3),
-                                child: const Icon(
-                                  Icons.home,
-                                  size: 80,
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            )
+                            ? _buildImageFromSource(bien.photosUrls!.first, isThumbnail: false)
                           : Container(
                               color: AppColors.primaryDark.withOpacity(0.3),
                               child: const Icon(
