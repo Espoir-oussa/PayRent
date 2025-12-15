@@ -17,9 +17,9 @@ Write-Host "================================" -ForegroundColor Cyan
 
 # 0. Mise a jour de la version dans pubspec.yaml
 Write-Host "`nMise a jour de pubspec.yaml..." -ForegroundColor Yellow
-Set-Location "D:\Flutter\payrent"
+Set-Location "D:\Collaboration Dev\payrent"
 
-$pubspecPath = "D:\Flutter\payrent\pubspec.yaml"
+$pubspecPath = "D:\Collaboration Dev\payrent\pubspec.yaml"
 $pubspecContent = Get-Content $pubspecPath -Raw
 
 # Extraire le build number actuel et l'incrementer
@@ -44,7 +44,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-$apkPath = "D:\Flutter\payrent\build\app\outputs\flutter-apk\app-release.apk"
+$apkPath = "D:\Collaboration Dev\payrent\build\app\outputs\flutter-apk\app-release.apk"
 $apkSize = [math]::Round((Get-Item $apkPath).Length / 1MB, 1)
 
 Write-Host "APK genere ($apkSize MB)" -ForegroundColor Green
@@ -62,12 +62,12 @@ $versionJson = @{
     minAndroidVersion = "5.0"
 } | ConvertTo-Json -Depth 3
 
-$versionJson | Out-File -FilePath "D:\Flutter\payrent\web_redirect\version.json" -Encoding UTF8
+$versionJson | Out-File -FilePath "D:\Collaboration Dev\payrent\web_redirect\version.json" -Encoding UTF8
 Write-Host "version.json mis a jour" -ForegroundColor Green
 
 # 3. Push web_redirect
 Write-Host "`nPush vers GitHub Pages..." -ForegroundColor Yellow
-Set-Location "D:\Flutter\payrent\web_redirect"
+Set-Location "D:\Collaboration Dev\payrent\web_redirect"
 git add version.json
 git commit -m "Release v$Version"
 git push origin main
@@ -88,7 +88,7 @@ if (-not $ghInstalled) {
 }
 
 # Creer la release et uploader l'APK
-Set-Location "D:\Flutter\payrent\web_redirect"
+Set-Location "D:\Collaboration Dev\payrent\web_redirect"
 $releaseNotes = "PayRent v$Version - APK Android: $apkSize MB - Date: $(Get-Date -Format 'dd/MM/yyyy')"
 
 gh release create "v$Version" $apkPath --repo "Espoir-oussa/payrent-releases" --title "PayRent v$Version" --notes $releaseNotes

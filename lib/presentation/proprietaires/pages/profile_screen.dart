@@ -4,7 +4,10 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/services/appwrite_service.dart';
 import '../../../config/colors.dart';
 import '../../../config/environment.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/di/providers.dart';
 import '../../shared/pages/no_connection_page.dart';
+import '../../shared/widgets/role_toggle.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -34,6 +37,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _email = '';
   String _role = '';
+  // String _selectedRole = 'proprietaire';
   String? _userDocId;
   String? _photoUrl;
   String? _userId;
@@ -89,6 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _adresseController.text = doc.data['adresse'] ?? '';
             _email = doc.data['email'] ?? user.email;
             _role = doc.data['role'] ?? 'proprietaire';
+            // _selectedRole = _role;
             _photoUrl = doc.data['photoUrl'];
           });
         } catch (docError) {
@@ -113,6 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _adresseController.text = doc.data['adresse'] ?? '';
               _email = doc.data['email'] ?? user.email;
               _role = doc.data['role'] ?? 'proprietaire';
+              // _selectedRole = _role;
               _photoUrl = doc.data['photoUrl'];
             });
           } else {
@@ -124,6 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               if (nameParts.length > 1)
                 _nomController.text = nameParts.sublist(1).join(' ');
               _role = 'proprietaire';
+              // _selectedRole = _role;
             });
           }
         }
@@ -145,6 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (nameParts.length > 1)
               _nomController.text = nameParts.sublist(1).join(' ');
             _role = 'proprietaire';
+            // _selectedRole = _role;
           });
         }
       }
@@ -430,6 +438,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Onglet rôle flottant
+                    const RoleToggle(),
+                    const SizedBox(height: 16),
+
                     // Avatar et email
                     Center(
                       child: Column(
@@ -444,23 +456,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentRed.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              _role == 'proprietaire'
-                                  ? 'Propriétaire'
-                                  : 'Locataire',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.accentRed,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final role = ref.watch(selectedRoleProvider);
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentRed.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  role == 'proprietaire' ? 'Propriétaire' : 'Locataire',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.accentRed,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

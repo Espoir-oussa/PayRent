@@ -18,7 +18,7 @@ enum AuthState {
 }
 
 /// Provider pour l'état de l'authentification au démarrage
-final authStateProvider = FutureProvider<AuthCheckResult>((ref) async {
+final authStateProvider = FutureProvider.autoDispose<AuthCheckResult>((ref) async {
   // Simuler un délai minimum pour l'effet visuel du splash
   await Future.delayed(const Duration(milliseconds: 1500));
 

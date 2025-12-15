@@ -87,6 +87,14 @@ class InvitationService {
       );
       final proprietaireNom = '${proprietaireDoc.data['prenom'] ?? ''} ${proprietaireDoc.data['nom'] ?? ''}'.trim();
 
+      // Debug: log bien id
+      debugPrint('createInvitation: bien.appwriteId=${bien.appwriteId}');
+
+      // Le bien doit avoir un ID Appwrite valide
+      if (bien.appwriteId == null || bien.appwriteId!.trim().isEmpty) {
+        throw Exception('Le bien doit être enregistré avant d\'envoyer une invitation');
+      }
+
       // Vérifier si une invitation en attente existe déjà pour cet email et ce bien
       final existingInvitations = await _appwriteService.listDocuments(
         collectionId: Environment.invitationsCollectionId,
@@ -165,6 +173,10 @@ class InvitationService {
 
       return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), emailSent: emailSent);
     } on AppwriteException catch (e) {
+      final msg = e.message?.toLowerCase() ?? '';
+      if (msg.contains('invalid query') || msg.contains('equal queries require')) {
+        throw Exception('Erreur lors de la création de l\'invitation: identifiant du bien invalide (bienId vide ou incorrect)');
+      }
       throw Exception('Erreur lors de la création de l\'invitation: ${e.message}');
     }
   }
