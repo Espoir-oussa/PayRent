@@ -1,0 +1,98 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_RELEASE_REPO: Espoir-oussa/payrent-releases
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure GH_RELEASES_TOKEN is set
+        run: |
+          if [ -z "${{ secrets.GH_RELEASES_TOKEN }}" ]; then
+            echo "GH_RELEASES_TOKEN secret is not set. Please add it to the repo (see RELEASING.md).";
+            exit 1;
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Save tag to env
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Update web_redirect/version.json on main
+        env:
+          TAG: ${{ env.TAG }}
+        run: |
+          version=${TAG#v}
+          echo "Updating web_redirect/version.json to version=$version"
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          # update fields: version, releaseDate, apkUrl
+          apkUrl="https://github.com/${{ env.TARGET_RELEASE_REPO }}/releases/download/${TAG}/app-release.apk"
+          jq --arg v "$version" --arg date "$(date -I)" --arg apkUrl "$apkUrl" \
+            '.version=$v | .releaseDate=$date | .apkUrl=$apkUrl' web_redirect/version.json > web_redirect/version.tmp && mv web_redirect/version.tmp web_redirect/version.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web_redirect/version.json
+          git commit -m "chore: update web_redirect/version.json for ${TAG}" || echo "No changes to commit"
+          git push origin main
+
+      - name: Upload APK as workflow artifact (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create or update release in target repo and upload APK
+        env:
+          GH_RELEASES_TOKEN: ${{ secrets.GH_RELEASES_TOKEN }}
+          TAG: ${{ env.TAG }}
+          TARGET: ${{ env.TARGET_RELEASE_REPO }}
+        run: |
+          set -e
+          apk_path=build/app/outputs/flutter-apk/app-release.apk
+          if [ ! -f "$apk_path" ]; then
+            echo "APK not found at $apk_path"; exit 1;
+          fi
+
+          # Try to create release
+          create_resp=$(curl -s -X POST -H "Authorization: token $GH_RELEASES_TOKEN" -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$TARGET/releases \
+            -d "{\"tag_name\": \"$TAG\", \"name\": \"$TAG\", \"body\": \"Automated release from $GITHUB_REPOSITORY\", \"draft\": false, \"prerelease\": false}")
+
+          release_id=$(echo "$create_resp" | jq -r '.id // empty')
+          if [ -z "$release_id" ]; then
+            echo "Create failed or release exists; fetching existing release by tag"
+            release_resp=$(curl -s -H "Authorization: token $GH_RELEASES_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/$TARGET/releases/tags/$TAG)
+            release_id=$(echo "$release_resp" | jq -r '.id // empty')
+            if [ -z "$release_id" ]; then
+              echo "Failed to create or find release for tag $TAG"; echo "$create_resp"; exit 1;
+            fi
+          fi
+
+          # upload asset
+          upload_url=$(curl -s -H "Authorization: token $GH_RELEASES_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/$TARGET/releases/$release_id | jq -r '.upload_url')
+          upload_url="${upload_url%%\{*}?name=app-release.apk"
+          curl -s -X POST -H "Authorization: token $GH_RELEASES_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @"$apk_path" "$upload_url&name=app-release.apk" || echo "Upload failed or asset already exists"
