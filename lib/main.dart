@@ -9,16 +9,17 @@ import 'config/theme.dart';
 import 'core/services/appwrite_service.dart';
 import 'presentation/proprietaires/pages/auth_screens/owner_login_screen.dart';
 import 'presentation/locataires/pages/accept_invitation_screen.dart';
+import 'presentation/locataires/pages/home_tenant_screen.dart';
 
 // Clé de navigation globale pour naviguer depuis n'importe où
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialiser Appwrite avant de lancer l'app
   AppwriteService().init();
-  
+
   // Le ProviderScope est OBLIGATOIRE pour utiliser Riverpod
   runApp(const ProviderScope(
     child: MyApp(),
@@ -70,17 +71,17 @@ class _MyAppState extends State<MyApp> {
 
   void _handleDeepLink(Uri uri) {
     debugPrint('📲 Deep link reçu: $uri');
-    
+
     // Gérer le lien d'acceptation d'invitation
     // Format: payrent://accept-invitation?token=xxx
     // ou: https://payrent.app/accept-invitation?token=xxx
     final path = uri.path.isEmpty ? uri.host : uri.path;
-    
+
     if (path == 'accept-invitation' || path == '/accept-invitation') {
       final token = uri.queryParameters['token'];
       if (token != null && token.isNotEmpty) {
         debugPrint('🎫 Token d\'invitation: $token');
-        
+
         // Naviguer vers l'écran d'acceptation
         WidgetsBinding.instance.addPostFrameCallback((_) {
           navigatorKey.currentState?.push(
@@ -104,6 +105,7 @@ class _MyAppState extends State<MyApp> {
       onGenerateRoute: _generateRoute,
       routes: {
         '/login_owner': (context) => const OwnerLoginScreen(),
+        '/tenant-home-debug': (context) => const HomeTenantScreen(),
       },
     );
   }
@@ -111,10 +113,11 @@ class _MyAppState extends State<MyApp> {
   /// Génère les routes dynamiquement pour gérer les deep links
   Route<dynamic>? _generateRoute(RouteSettings settings) {
     final uri = Uri.parse(settings.name ?? '');
-    
+
     // Gérer le lien d'acceptation d'invitation
     // Format: /accept-invitation?token=xxx ou payrent://accept-invitation?token=xxx
-    if (uri.path == '/accept-invitation' || uri.path.contains('accept-invitation')) {
+    if (uri.path == '/accept-invitation' ||
+        uri.path.contains('accept-invitation')) {
       final token = uri.queryParameters['token'];
       if (token != null && token.isNotEmpty) {
         return MaterialPageRoute(

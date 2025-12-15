@@ -3,11 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Import supprimé car inutilisé
-import '../../states/owner_login_state.dart'; 
+import '../../states/owner_login_state.dart';
 import '../../../../config/colors.dart';
 import '../../../../core/di/providers.dart';
-import '../home_owner_screen.dart'; 
-import 'owner_register_screen.dart'; 
+import '../home_owner_screen.dart';
+import 'owner_register_screen.dart';
+import '../../../locataires/pages/home_tenant_screen.dart';
 
 class OwnerLoginScreen extends ConsumerStatefulWidget {
   const OwnerLoginScreen({super.key});
@@ -36,14 +37,15 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
     // Écouter les changements d'état
     ref.listen<OwnerLoginState>(ownerLoginControllerProvider, (previous, next) {
       if (next.status == LoginStatus.success) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HomeOwnerScreen()),
-          );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeOwnerScreen()),
+        );
       }
       if (next.status == LoginStatus.failure) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur: ${next.errorMessage ?? "Vérifiez vos identifiants"}'),
+            content: Text(
+                'Erreur: ${next.errorMessage ?? "Vérifiez vos identifiants"}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
@@ -54,16 +56,17 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
     void handleLogin() {
       if (loginState.status != LoginStatus.loading) {
         ref.read(ownerLoginControllerProvider.notifier).login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+              email: _emailController.text.trim(),
+              password: _passwordController.text,
+            );
       }
     }
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0), // Reduced vertical padding
+          padding: const EdgeInsets.symmetric(
+              horizontal: 40.0, vertical: 24.0), // Reduced vertical padding
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,9 +80,9 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                   color: AppColors.primaryDark,
                 ),
               ),
-              
+
               const SizedBox(height: 5), // Reduced from 60
-              
+
               // Sous-titre
               Text(
                 'Gérez vos biens et vos locataires.',
@@ -103,7 +106,7 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                 onFieldSubmitted: (_) => handleLogin(),
               ),
               const SizedBox(height: 20), // Reduced from 30
-              
+
               // CHAMP MOT DE PASSE avec icône de visibilité
               TextFormField(
                 controller: _passwordController,
@@ -113,8 +116,8 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword 
-                          ? Icons.visibility_off_outlined 
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: AppColors.primaryDark.withOpacity(0.5),
                     ),
@@ -127,13 +130,13 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                 onFieldSubmitted: (_) => handleLogin(),
               ),
               const SizedBox(height: 12), // Reduced from 20
-              
+
               // Lien Mot de Passe Oublié
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () { 
-                    // TODO: Naviguer vers l'écran de mot de passe oublié 
+                  onPressed: () {
+                    // TODO: Naviguer vers l'écran de mot de passe oublié
                   },
                   child: Text(
                     'Mot de passe oublié ?',
@@ -148,12 +151,14 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
               ),
 
               const SizedBox(height: 30), // Reduced from 50
-              
-              // BOUTON DE CONNEXION 
+
+              // BOUTON DE CONNEXION
               SizedBox(
                 height: 52, // Slightly taller button for better touch target
                 child: ElevatedButton(
-                  onPressed: loginState.status == LoginStatus.loading ? null : handleLogin,
+                  onPressed: loginState.status == LoginStatus.loading
+                      ? null
+                      : handleLogin,
                   style: Theme.of(context).elevatedButtonTheme.style,
                   child: loginState.status == LoginStatus.loading
                       ? const SizedBox(
@@ -166,31 +171,35 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                         )
                       : Text(
                           'SE CONNECTER',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.textLight,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: AppColors.textLight,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 30), // Reduced from 40
-              
+
               // Séparateur plus discret
               Row(
                 children: [
                   Expanded(
                     child: Divider(
-                      color: AppColors.primaryDark.withOpacity(0.15), // More subtle
+                      color: AppColors.primaryDark
+                          .withOpacity(0.15), // More subtle
                       thickness: 1,
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12), // Reduced padding
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12), // Reduced padding
                     child: Text(
                       'ou',
                       style: TextStyle(
-                        color: AppColors.primaryDark.withOpacity(0.4), // More subtle
+                        color: AppColors.primaryDark
+                            .withOpacity(0.4), // More subtle
                         fontFamily: 'MuseoModerno',
                         fontSize: 13, // Smaller
                       ),
@@ -198,21 +207,51 @@ class _OwnerLoginScreenState extends ConsumerState<OwnerLoginScreen> {
                   ),
                   Expanded(
                     child: Divider(
-                      color: AppColors.primaryDark.withOpacity(0.15), // More subtle
+                      color: AppColors.primaryDark
+                          .withOpacity(0.15), // More subtle
                       thickness: 1,
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 30), // Reduced from 40
-              
+
+              // 🧪 BOUTON DE TEST - Voir la page du locataire
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.blue.withOpacity(0.05),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (context) => const HomeTenantScreen()),
+                    );
+                  },
+                  child: const Text(
+                    '🧪 Mode Test - Voir la page Locataire',
+                    style: TextStyle(
+                      fontFamily: 'MuseoModerno',
+                      color: Colors.blue,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30), // Reduced from 40
+
               // Lien Créer un Compte
               TextButton(
                 onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const OwnerRegisterScreen()),
-                    );
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (context) => const OwnerRegisterScreen()),
+                  );
                 },
                 child: Text.rich(
                   TextSpan(

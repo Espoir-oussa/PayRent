@@ -35,6 +35,14 @@ import '../../domain/repositories/facture_repository.dart';
 import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
 import '../../domain/usecases/auth/owner_register_usecase.dart';
+import '../../domain/usecases/contrat/get_tenant_locations_usecase.dart';
+import '../../domain/usecases/paiement/get_tenant_payments_usecase.dart';
+import '../../domain/usecases/facture/get_tenant_invoices_usecase.dart';
+
+// 4. Presentation - Controllers Tenant
+import '../../presentation/locataires/pages/locations/tenant_locations_controller.dart';
+import '../../presentation/locataires/pages/payments/tenant_payments_controller.dart';
+import '../../presentation/locataires/pages/invoices/tenant_invoices_controller.dart';
 
 // =================================================================
 // 1. PROVIDERS DE BASE (CORE)
@@ -159,4 +167,52 @@ final proprietaireBiensProvider =
 
   final bienRepository = ref.watch(bienRepositoryProvider);
   return bienRepository.getBiensByProprietaire(userId);
+});
+
+// =================================================================
+// 6. PROVIDERS POUR LES CAS D'UTILISATION TENANT
+// =================================================================
+
+// Use Case - Get Tenant Locations
+final getTenantLocationsUseCaseProvider = Provider((ref) {
+  return GetTenantLocationsUseCase(ref.watch(contratRepositoryProvider));
+});
+
+// Use Case - Get Tenant Payments
+final getTenantPaymentsUseCaseProvider = Provider((ref) {
+  return GetTenantPaymentsUseCase(ref.watch(paiementRepositoryProvider));
+});
+
+// Use Case - Get Tenant Invoices
+final getTenantInvoicesUseCaseProvider = Provider((ref) {
+  return GetTenantInvoicesUseCase(ref.watch(factureRepositoryProvider));
+});
+
+// =================================================================
+// 7. PROVIDERS DE GESTION D'ÉTAT TENANT
+// =================================================================
+
+// Controller - Tenant Locations
+final tenantLocationsControllerProvider =
+    StateNotifierProvider<TenantLocationsController, TenantLocationsState>(
+        (ref) {
+  return TenantLocationsController(
+    ref.watch(getTenantLocationsUseCaseProvider),
+  );
+});
+
+// Controller - Tenant Payments
+final tenantPaymentsControllerProvider =
+    StateNotifierProvider<TenantPaymentsController, TenantPaymentsState>((ref) {
+  return TenantPaymentsController(
+    ref.watch(getTenantPaymentsUseCaseProvider),
+  );
+});
+
+// Controller - Tenant Invoices
+final tenantInvoicesControllerProvider =
+    StateNotifierProvider<TenantInvoicesController, TenantInvoicesState>((ref) {
+  return TenantInvoicesController(
+    ref.watch(getTenantInvoicesUseCaseProvider),
+  );
 });
