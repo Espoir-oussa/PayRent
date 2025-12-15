@@ -96,3 +96,24 @@ jobs:
           upload_url=$(curl -s -H "Authorization: token $GH_RELEASES_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/$TARGET/releases/$release_id | jq -r '.upload_url')
           upload_url="${upload_url%%\{*}?name=app-release.apk"
           curl -s -X POST -H "Authorization: token $GH_RELEASES_TOKEN" -H "Content-Type: application/octet-stream" --data-binary @"$apk_path" "$upload_url&name=app-release.apk" || echo "Upload failed or asset already exists"
+
+      - name: Publish version.json to pages repo
+        env:
+          GH_RELEASES_TOKEN: ${{ secrets.GH_RELEASES_TOKEN }}
+          TAG: ${{ env.TAG }}
+          TARGET: ${{ env.TARGET_RELEASE_REPO }}
+        run: |
+          set -e
+          echo "Publishing web_redirect/version.json to Espoir-oussa/payrent-releases"
+          git clone "https://x-access-token:${GH_RELEASES_TOKEN}@github.com/Espoir-oussa/payrent-releases.git" tmp-pages
+          cd tmp-pages
+          # choose gh-pages if exists, otherwise main
+          if git ls-remote --heads origin gh-pages | grep -q gh-pages; then
+            git checkout gh-pages
+          else
+            git checkout main
+          fi
+          cp ../web_redirect/version.json ./version.json
+          git add version.json
+          git commit -m "chore(pages): update version.json for ${TAG}" || echo "No changes to pages"
+          git push origin HEAD
