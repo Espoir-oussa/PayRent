@@ -19,6 +19,7 @@ const String paiementsCollection = 'paiements';
 const String plaintesCollection = 'plaintes';
 const String facturesCollection = 'factures';
 const String invitationsCollection = 'invitations';
+const String notificationsCollection = 'notifications';
 
 // Bucket IDs
 const String imagesBucket = 'images';
@@ -528,6 +529,21 @@ Future<void> setupInvitationsCollection(AppwriteHttpClient client) async {
   await createIndex(client, invitationsCollection, 'statut_idx', 'key', ['statut']);
 }
 
+Future<void> setupNotificationsCollection(AppwriteHttpClient client) async {
+  await createCollection(client, notificationsCollection, 'Notifications');
+  await Future.delayed(Duration(milliseconds: 400));
+
+  await createStringAttribute(client, notificationsCollection, 'userId', 36, required: true);
+  await createStringAttribute(client, notificationsCollection, 'title', 200, required: true);
+  await createStringAttribute(client, notificationsCollection, 'body', 1000);
+  await createStringAttribute(client, notificationsCollection, 'data', 2000);
+  await createEnumAttribute(client, notificationsCollection, 'isRead', ['true', 'false'], required: true);
+  await createDatetimeAttribute(client, notificationsCollection, 'createdAt');
+
+  await Future.delayed(Duration(seconds: 1));
+  await createIndex(client, notificationsCollection, 'user_idx', 'key', ['userId']);
+}
+
 // ============== MAIN ==============
 
 Future<void> main() async {
@@ -571,8 +587,12 @@ Future<void> main() async {
     await setupFacturesCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
-    print('\n[7/7] Collection Invitations');
+    print('\n[7/8] Collection Invitations');
     await setupInvitationsCollection(client);
+    await Future.delayed(Duration(seconds: 2));
+
+    print('\n[8/8] Collection Notifications');
+    await setupNotificationsCollection(client);
     await Future.delayed(Duration(seconds: 2));
 
     // Créer les buckets de stockage

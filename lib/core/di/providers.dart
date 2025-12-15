@@ -16,6 +16,7 @@ import '../services/appwrite_service.dart';
 import '../services/image_upload_service.dart';
 import '../services/invitation_service.dart';
 import '../services/password_reset_service.dart';
+import '../services/notification_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -68,6 +69,20 @@ final invitationServiceProvider = Provider((ref) {
 // Provider du service de réinitialisation de mot de passe
 final passwordResetServiceProvider = Provider((ref) {
   return PasswordResetService(ref.watch(appwriteServiceProvider));
+});
+
+// Provider du service de notifications
+final notificationServiceProvider = Provider((ref) {
+  final client = ref.watch(appwriteServiceProvider).client;
+  return NotificationService(client);
+});
+
+// Provider du nombre de notifications non lues pour l'utilisateur courant
+final unreadNotificationsCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final userId = await ref.watch(currentUserIdProvider.future);
+  if (userId == null) return 0;
+  final notifService = ref.watch(notificationServiceProvider);
+  return notifService.unreadCountForUser(userId);
 });
 
 // =================================================================
