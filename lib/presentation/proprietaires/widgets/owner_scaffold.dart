@@ -2,111 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../config/colors.dart';
 import '../../shared/widgets/role_toggle.dart';
-import '../pages/profile_screen.dart';
+import '../../shared/widgets/shared_app_bar.dart';
 
 class OwnerScaffold extends StatelessWidget {
   final Widget body;
   final int currentIndex;
   final ValueChanged<int> onIndexChanged;
+  final VoidCallback? onNotificationsPressed;
+  final VoidCallback? onProfilePressed;
+  final VoidCallback? onLogoutPressed;
 
   const OwnerScaffold({
-    Key? key,
+    super.key,
     required this.body,
     required this.currentIndex,
     required this.onIndexChanged,
-  }) : super(key: key);
+    this.onNotificationsPressed,
+    this.onProfilePressed,
+    this.onLogoutPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.accentRed,
-        foregroundColor: AppColors.textLight,
-        automaticallyImplyLeading: false,
-        elevation: 4,
-        toolbarHeight: 80,
-        title: SizedBox(
-          height: 100,
-          child: Image.asset(
-            'assets/images/payrent_blanc.png',
-            height: 60,
-            color: AppColors.textLight,
-            fit: BoxFit.contain,
-          ),
-        ),
-        centerTitle: false,
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined, size: 28),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notifications - À implémenter')),
-                  );
-                },
-                padding: const EdgeInsets.all(8),
-              ),
-              Positioned(
-                right: 10,
-                top: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRed,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 4),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.account_circle_outlined, size: 32),
-            tooltip: 'Menu du profil',
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            elevation: 4,
-            offset: const Offset(0, 50),
-            onSelected: (value) {
-              switch (value) {
-                case 'profile':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                  break;
-                case 'deconnexion':
-                  // handled by caller if needed
-                  break;
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: const [
-                    Icon(Icons.person_outline, color: AppColors.primaryDark),
-                    SizedBox(width: 12),
-                    Text('Mon profil'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: 'deconnexion',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_outlined, color: AppColors.accentRed),
-                    const SizedBox(width: 12),
-                    const Text('Déconnexion', style: TextStyle(color: AppColors.accentRed)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
-        ],
+      appBar: SharedAppBar(
+        currentRole: 'owner',
+        onNotificationsPressed: onNotificationsPressed,
+        onProfilePressed: onProfilePressed,
+        onLogoutPressed: onLogoutPressed,
       ),
       body: SafeArea(
         child: Column(
@@ -132,7 +55,14 @@ class OwnerScaffold extends StatelessWidget {
       Icons.receipt_long_outlined,
     ];
 
-    final labels = ['Biens', 'Plaintes', 'Pay.', 'Fact.'];
+    final activeIcons = [
+      Icons.home_work,
+      Icons.report_problem,
+      Icons.payments,
+      Icons.receipt_long,
+    ];
+
+    final labels = ['Biens', 'Plaintes', 'Paiements', 'Factures'];
 
     return Container(
       height: 70,
@@ -145,7 +75,12 @@ class OwnerScaffold extends StatelessWidget {
             offset: const Offset(0, -3),
           ),
         ],
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
@@ -155,11 +90,25 @@ class OwnerScaffold extends StatelessWidget {
         selectedItemColor: AppColors.accentRed,
         unselectedItemColor: Colors.grey.shade600,
         elevation: 0,
-        selectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 10),
+        selectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          height: 1.5,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 0,
+        ),
+        showSelectedLabels: true,
+        showUnselectedLabels: false,
         items: List.generate(icons.length, (index) {
           return BottomNavigationBarItem(
-            icon: Container(padding: const EdgeInsets.symmetric(vertical: 6), child: Icon(icons[index], size: 26)),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Icon(
+                currentIndex == index ? activeIcons[index] : icons[index],
+                size: 26,
+              ),
+            ),
             label: labels[index],
           );
         }),

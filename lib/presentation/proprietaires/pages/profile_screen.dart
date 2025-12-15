@@ -7,7 +7,7 @@ import '../../../config/environment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/providers.dart';
 import '../../shared/pages/no_connection_page.dart';
-import '../../shared/widgets/role_toggle.dart';
+import '../../shared/widgets/shared_profile_form.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -36,8 +36,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _adresseController = TextEditingController();
 
   String _email = '';
-  String _role = '';
-  // String _selectedRole = 'proprietaire';
   String? _userDocId;
   String? _photoUrl;
   String? _userId;
@@ -92,8 +90,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _telephoneController.text = doc.data['telephone'] ?? '';
             _adresseController.text = doc.data['adresse'] ?? '';
             _email = doc.data['email'] ?? user.email;
-            _role = doc.data['role'] ?? 'proprietaire';
-            // _selectedRole = _role;
             _photoUrl = doc.data['photoUrl'];
           });
         } catch (docError) {
@@ -117,8 +113,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _telephoneController.text = doc.data['telephone'] ?? '';
               _adresseController.text = doc.data['adresse'] ?? '';
               _email = doc.data['email'] ?? user.email;
-              _role = doc.data['role'] ?? 'proprietaire';
-              // _selectedRole = _role;
               _photoUrl = doc.data['photoUrl'];
             });
           } else {
@@ -129,8 +123,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _prenomController.text = nameParts.first;
               if (nameParts.length > 1)
                 _nomController.text = nameParts.sublist(1).join(' ');
-              _role = 'proprietaire';
-              // _selectedRole = _role;
             });
           }
         }
@@ -151,8 +143,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (nameParts.isNotEmpty) _prenomController.text = nameParts.first;
             if (nameParts.length > 1)
               _nomController.text = nameParts.sublist(1).join(' ');
-            _role = 'proprietaire';
-            // _selectedRole = _role;
           });
         }
       }
@@ -367,300 +357,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // Widget pour afficher l'avatar avec possibilité de modification
-  Widget _buildProfileAvatar() {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: _isUploadingImage ? null : _pickAndUploadImage,
-          child: CircleAvatar(
-            radius: 55,
-            backgroundColor: AppColors.accentRed.withOpacity(0.1),
-            backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
-                ? NetworkImage(_photoUrl!)
-                : null,
-            child: _isUploadingImage
-                ? const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  )
-                : (_photoUrl == null || _photoUrl!.isEmpty)
-                    ? Text(
-                        _getInitials(),
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.accentRed,
-                        ),
-                      )
-                    : null,
-          ),
-        ),
-        Positioned(
-          bottom: 0,
-          right: 0,
-          child: GestureDetector(
-            onTap: _isUploadingImage ? null : _pickAndUploadImage,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.accentRed,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mon profil'),
-        backgroundColor: AppColors.accentRed,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Onglet rôle flottant
-                    const RoleToggle(),
-                    const SizedBox(height: 16),
-
-                    // Avatar et email
-                    Center(
-                      child: Column(
-                        children: [
-                          _buildProfileAvatar(),
-                          const SizedBox(height: 12),
-                          Text(
-                            _email,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Consumer(
-                            builder: (context, ref, _) {
-                              final role = ref.watch(selectedRoleProvider);
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.accentRed.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  role == 'proprietaire' ? 'Propriétaire' : 'Locataire',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.accentRed,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Champs de formulaire
-                    _buildTextField(
-                      controller: _nomController,
-                      label: 'Nom',
-                      icon: Icons.person_outline,
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Le nom est requis'
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildTextField(
-                      controller: _prenomController,
-                      label: 'Prénom',
-                      icon: Icons.person_outline,
-                      validator: (value) => value == null || value.isEmpty
-                          ? 'Le prénom est requis'
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildTextField(
-                      controller: _telephoneController,
-                      label: 'Téléphone',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildTextField(
-                      controller: _adresseController,
-                      label: 'Adresse',
-                      icon: Icons.location_on_outlined,
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Bouton Enregistrer
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton.icon(
-                        onPressed: _isSaving ? null : _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentRed,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: _isSaving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Icon(Icons.save_outlined),
-                        label: Text(
-                            _isSaving ? 'Enregistrement...' : 'Enregistrer'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Bouton Déconnexion
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: OutlinedButton.icon(
-                        onPressed: _isLoggingOut ? null : _logout,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.grey.shade700,
-                          side: BorderSide(color: Colors.grey.shade400),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: _isLoggingOut
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.grey.shade700),
-                                ),
-                              )
-                            : const Icon(Icons.logout_outlined),
-                        label: Text(_isLoggingOut
-                            ? 'Déconnexion...'
-                            : 'Se déconnecter'),
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Section danger
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Zone de danger',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'La suppression de votre compte est définitive et irréversible.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.red.shade700,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton.icon(
-                            onPressed: () => _showDeleteAccountDialog(context),
-                            icon: const Icon(Icons.delete_forever,
-                                color: Colors.red),
-                            label: const Text(
-                              'Supprimer mon compte',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      validator: validator,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.accentRed),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.accentRed, width: 2),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-      ),
-    );
-  }
-
   Future<void> _logout() async {
     try {
       setState(() => _isLoggingOut = true);
@@ -685,17 +381,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _isLoggingOut = false);
       }
     }
-  }
-
-  String _getInitials() {
-    final nom = _nomController.text.trim();
-    final prenom = _prenomController.text.trim();
-
-    String initials = '';
-    if (prenom.isNotEmpty) initials += prenom[0].toUpperCase();
-    if (nom.isNotEmpty) initials += nom[0].toUpperCase();
-
-    return initials.isEmpty ? '?' : initials;
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
@@ -916,5 +601,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mon profil'),
+        backgroundColor: AppColors.accentRed,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Form(
+        key: _formKey,
+        child: SharedProfileForm(
+          nomController: _nomController,
+          prenomController: _prenomController,
+          telephoneController: _telephoneController,
+          adresseController: _adresseController,
+          email: _email,
+          
+          photoUrl: _photoUrl,
+          isLoading: _isLoading,
+          isSaving: _isSaving,
+          isUploadingImage: _isUploadingImage,
+          isLoggingOut: _isLoggingOut,
+          onPickImage: _pickAndUploadImage,
+          onSave: _saveProfile,
+          onLogout: _logout,
+          onDelete: () => _showDeleteAccountDialog(context),
+        ),
+      ),
+    );
   }
 }

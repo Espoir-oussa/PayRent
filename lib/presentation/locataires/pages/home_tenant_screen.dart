@@ -16,6 +16,8 @@ import '../widgets/tenant_scaffold.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/services/appwrite_service.dart';
 import '../../shared/pages/no_connection_page.dart';
+// Ajoutez cet import
+import '../../proprietaires/pages/profile_screen.dart'; // <-- IMPORT AJOUTÉ
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
   const HomeTenantScreen({super.key});
@@ -97,10 +99,9 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
         final appwriteService = ref.read(appwriteServiceProvider);
         await appwriteService.logout();
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/login_owner',
-            (route) => false,
-          );
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login_owner', (route) => false);
         }
       } catch (e) {
         if (mounted) {
@@ -127,9 +128,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return TenantScaffold(
@@ -137,6 +136,14 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
       onIndexChanged: (index) => setState(() => _currentIndex = index),
       body: _buildBody(),
       onNotificationsPressed: _handleNotifications,
+      onProfilePressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ProfileScreen(), // Même écran pour tous
+          ),
+        );
+      },
       onLogoutPressed: _logout,
     );
   }
@@ -169,7 +176,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
               gradient: LinearGradient(
                 colors: [
                   AppColors.primaryDark,
-                  AppColors.primaryDark.withOpacity(0.8)
+                  AppColors.primaryDark.withOpacity(0.8),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -179,8 +186,11 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  child: Icon(Icons.person,
-                      size: 35, color: AppColors.primaryDark),
+                  child: Icon(
+                    Icons.person,
+                    size: 35,
+                    color: AppColors.primaryDark,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -213,14 +223,15 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
           // Carte du logement actuel
           Text(
             'Mon logement',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Card(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -266,9 +277,9 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
           // Actions rapides
           Text(
             'Actions rapides',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Row(

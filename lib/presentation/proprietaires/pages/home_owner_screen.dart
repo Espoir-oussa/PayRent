@@ -37,30 +37,13 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
     const InvoicingScreen(),
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    return OwnerScaffold(
-      currentIndex: _currentIndex,
-      onIndexChanged: (i) => setState(() => _currentIndex = i),
-      body: _screens[_currentIndex],
+  void _handleNotifications() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notifications - À implémenter'),
+        duration: Duration(milliseconds: 1500),
+      ),
     );
-  }
-
-  // Cette méthode peut être supprimée si OwnerScaffold gère déjà le menu
-  void _handleMenuSelection(String value, BuildContext context) {
-    switch (value) {
-      case 'profile':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ProfileScreen(),
-          ),
-        );
-        break;
-      case 'deconnexion':
-        _showLogoutConfirmationDialog(context);
-        break;
-    }
   }
 
   void _showLogoutConfirmationDialog(BuildContext context) {
@@ -73,10 +56,7 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
           ),
           title: const Text(
             'Déconnexion',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
           ),
           content: const Text(
             'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -136,5 +116,24 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         );
       }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OwnerScaffold(
+      currentIndex: _currentIndex,
+      onIndexChanged: (i) => setState(() => _currentIndex = i),
+      body: _screens[_currentIndex],
+      onNotificationsPressed: _handleNotifications,
+      onProfilePressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const ProfileScreen(), // Même écran pour tous
+          ),
+        );
+      },
+      onLogoutPressed: () => _showLogoutConfirmationDialog(context),
+    );
   }
 }
