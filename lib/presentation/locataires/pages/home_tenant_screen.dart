@@ -12,8 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/colors.dart';
 import '../../../config/theme.dart';
-import '../../shared/widgets/role_toggle.dart';
+import '../widgets/tenant_scaffold.dart';
 import '../../../core/di/providers.dart';
+import '../../../core/services/appwrite_service.dart';
 import '../../shared/pages/no_connection_page.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
@@ -114,103 +115,29 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
     }
   }
 
+  void _handleNotifications() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Notifications - À implémenter'),
+        duration: Duration(milliseconds: 1500),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'PayRent',
-          style: TextStyle(
-            fontFamily: logoFontFamily, // MuseoModerno pour le logo uniquement
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.primaryDark,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: Notifications
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                const SizedBox(height: 8),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 0),
-                  child: RoleToggle(),
-                ),
-                Expanded(child: _buildBody()),
-              ],
-            ),
-      bottomNavigationBar: Container(
-        height: 70,
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, -3),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey.shade300,
-              width: 1,
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: AppColors.accentRed,
-          unselectedItemColor: Colors.grey.shade600,
-          elevation: 0,
-          selectedLabelStyle: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            height: 1.5,
-          ),
-          unselectedLabelStyle: const TextStyle(fontSize: 0),
-          showSelectedLabels: true,
-          showUnselectedLabels: false,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Accueil',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.payment_outlined),
-              activeIcon: Icon(Icons.payment),
-              label: 'Paiements',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.report_problem_outlined),
-              activeIcon: Icon(Icons.report_problem),
-              label: 'Plaintes',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outlined),
-              activeIcon: Icon(Icons.person),
-              label: 'Profil',
-            ),
-          ],
-        ),
-      ),
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return TenantScaffold(
+      currentIndex: _currentIndex,
+      onIndexChanged: (index) => setState(() => _currentIndex = index),
+      body: _buildBody(),
+      onNotificationsPressed: _handleNotifications,
+      onLogoutPressed: _logout,
     );
   }
 
@@ -371,6 +298,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                   color: Colors.blue,
                   onTap: () {
                     // TODO: Voir les quittances
+                    _handleNotifications();
                   },
                 ),
               ),
