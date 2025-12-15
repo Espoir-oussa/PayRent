@@ -10,7 +10,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../config/colors.dart';
 import 'bien_management_screen.dart';
 import 'complaint_tracking_screen.dart';
@@ -36,20 +35,6 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
     const ComplaintTrackingScreen(),
     const PaymentHistoryScreen(),
     const InvoicingScreen(),
-  ];
-
-  final List<IconData> _bottomIcons = [
-    Icons.home_work_outlined,
-    Icons.report_problem_outlined,
-    Icons.payments_outlined,
-    Icons.receipt_long_outlined,
-  ];
-
-  final List<String> _bottomLabels = [
-    'Biens',
-    'Plaintes',
-    'Pay.',
-    'Fact.',
   ];
 
   @override
@@ -152,6 +137,99 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
     );
   }
 
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, -3),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+        },
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.accentRed,
+        unselectedItemColor: Colors.grey.shade600,
+        elevation: 0,
+        selectedLabelStyle: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          height: 1.5,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 0, // Texte invisible pour les onglets non sélectionnés
+        ),
+        showSelectedLabels: true,
+        showUnselectedLabels: false, // Cache les labels non sélectionnés
+        items: [
+          BottomNavigationBarItem(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Icon(
+                _currentIndex == 0 
+                  ? Icons.home_work
+                  : Icons.home_work_outlined,
+                size: 26,
+              ),
+            ),
+            label: 'Biens',
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Icon(
+                _currentIndex == 1
+                  ? Icons.report_problem
+                  : Icons.report_problem_outlined,
+                size: 26,
+              ),
+            ),
+            label: 'Plaintes',
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Icon(
+                _currentIndex == 2
+                  ? Icons.payments
+                  : Icons.payments_outlined,
+                size: 26,
+              ),
+            ),
+            label: 'Paiements',
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Icon(
+                _currentIndex == 3
+                  ? Icons.receipt_long
+                  : Icons.receipt_long_outlined,
+                size: 26,
+              ),
+            ),
+            label: 'Factures',
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleMenuSelection(String value, BuildContext context) {
     switch (value) {
       case 'profile':
@@ -241,58 +319,6 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         );
       }
     }
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      height: 70,
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, -3),
-          ),
-        ],
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppColors.accentRed,
-        unselectedItemColor: Colors.grey.shade600,
-        elevation: 0,
-        selectedLabelStyle: GoogleFonts.poppins(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: GoogleFonts.poppins(
-          fontSize: 10,
-        ),
-        items: List.generate(_bottomIcons.length, (index) {
-          return BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Icon(
-                _bottomIcons[index],
-                size: 26,
-              ),
-            ),
-            label: _bottomLabels[index],
-          );
-        }),
-      ),
-    );
   }
 
   void _handleNotifications() {

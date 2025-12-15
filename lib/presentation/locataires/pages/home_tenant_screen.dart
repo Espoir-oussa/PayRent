@@ -153,29 +153,63 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                 Expanded(child: _buildBody()),
               ],
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        selectedItemColor: AppColors.primaryDark,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Accueil',
+      bottomNavigationBar: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, -3),
+            ),
+          ],
+          border: Border(
+            top: BorderSide(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.payment),
-            label: 'Paiements',
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppColors.accentRed,
+          unselectedItemColor: Colors.grey.shade600,
+          elevation: 0,
+          selectedLabelStyle: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            height: 1.5,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.report_problem),
-            label: 'Plaintes',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
+          unselectedLabelStyle: const TextStyle(fontSize: 0),
+          showSelectedLabels: true,
+          showUnselectedLabels: false,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Accueil',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.payment_outlined),
+              activeIcon: Icon(Icons.payment),
+              label: 'Paiements',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.report_problem_outlined),
+              activeIcon: Icon(Icons.report_problem),
+              label: 'Plaintes',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outlined),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }
