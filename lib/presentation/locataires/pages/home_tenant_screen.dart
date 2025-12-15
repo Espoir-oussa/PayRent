@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/colors.dart';
 import '../../../config/theme.dart';
+import '../../shared/widgets/role_toggle.dart';
 import '../../../core/di/providers.dart';
 import '../../shared/pages/no_connection_page.dart';
 
@@ -142,7 +143,16 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _buildBody(),
+          : Column(
+              children: [
+                const SizedBox(height: 8),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 0),
+                  child: RoleToggle(),
+                ),
+                Expanded(child: _buildBody()),
+              ],
+            ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),

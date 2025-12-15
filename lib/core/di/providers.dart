@@ -38,6 +38,8 @@ import '../../domain/repositories/facture_repository.dart';
 import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
 import '../../domain/usecases/auth/owner_register_usecase.dart';
+import '../../config/environment.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // =================================================================
 // 1. PROVIDERS DE BASE (CORE)
@@ -162,6 +164,53 @@ final currentUserIdProvider = FutureProvider<String?>((ref) async {
   final appwriteService = ref.watch(appwriteServiceProvider);
   final user = await appwriteService.getCurrentUser();
   return user?.$id;
+});
+
+// Provider global pour le rôle sélectionné
+class SelectedRoleNotifier extends StateNotifier<String> {
+  final Ref ref;
+  SelectedRoleNotifier(this.ref) : super('proprietaire') {
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final current = await ref.read(authRepositoryAppwriteProvider).getCurrentUser();
+      if (current != null && current.typeRole.isNotEmpty) {
+        state = current.typeRole;
+      }
+    } catch (_) {}
+  }
+
+  void select(String newRole) {
+    if (newRole == state) return;
+
+    // Optimistic update: set state immediately so UI reacts fast
+    state = newRole;
+
+    // Persist in background (fire-and-forget)
+    _persistRole(newRole);
+  }
+
+  Future<void> _persistRole(String newRole) async {
+    try {
+      final appwriteService = ref.read(appwriteServiceProvider);
+      final current = await ref.read(authRepositoryAppwriteProvider).getCurrentUser();
+      if (current == null) return;
+
+      await appwriteService.updateDocument(
+        collectionId: Environment.usersCollectionId,
+        documentId: current.appwriteId ?? '',
+        data: {'role': newRole, 'updatedAt': DateTime.now().toIso8601String()},
+      );
+    } catch (e) {
+      // Optionnel: log ou revenir en arrière si nécessaire
+    }
+  }
+}
+
+final selectedRoleProvider = StateNotifierProvider<SelectedRoleNotifier, String>((ref) {
+  return SelectedRoleNotifier(ref);
 });
 
 // Provider pour récupérer les biens du propriétaire

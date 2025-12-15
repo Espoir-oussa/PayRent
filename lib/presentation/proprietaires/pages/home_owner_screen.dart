@@ -17,6 +17,7 @@ import 'complaint_tracking_screen.dart';
 import 'invoicing_screen.dart';
 import 'payment_history_screen.dart';
 import 'profile_screen.dart';
+import '../../shared/widgets/role_toggle.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/services/appwrite_service.dart';
 
@@ -57,6 +58,7 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.accentRed,
         foregroundColor: AppColors.textLight,
+        automaticallyImplyLeading: false,
         elevation: 4,
         toolbarHeight: 80,
         title: SizedBox(
@@ -135,7 +137,16 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
         ],
       ),
       body: SafeArea(
-        child: _screens[_currentIndex],
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 0),
+              child: RoleToggle(),
+            ),
+            Expanded(child: _screens[_currentIndex]),
+          ],
+        ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );

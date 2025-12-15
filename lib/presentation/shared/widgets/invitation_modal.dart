@@ -67,6 +67,52 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
   Future<void> _sendInvitation() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Ensure the bien has a valid appwriteId — if not, offer to save it now
+    BienModel targetBien = widget.bien;
+    if (targetBien.appwriteId == null || targetBien.appwriteId!.isEmpty) {
+      final save = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Bien non enregistré'),
+          content: const Text('Le bien doit être enregistré avant d\'envoyer une invitation. Voulez-vous enregistrer le bien maintenant ?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Enregistrer')),
+          ],
+        ),
+      );
+
+      if (save != true) return;
+
+      // Attempt to create the bien
+      setState(() => _isLoading = true);
+      try {
+        final bienRepository = widget.ref.read(bienRepositoryProvider);
+        final created = await bienRepository.createBien(widget.bien);
+        // Refresh the list so the new bien appears
+        widget.ref.invalidate(proprietaireBiensProvider);
+        targetBien = created;
+        debugPrint('✅ Bien créé automatiquement avant invitation: ${created.appwriteId}');
+      } catch (e, st) {
+        debugPrint('❌ Erreur création automatique du bien: $e');
+        debugPrint(st.toString());
+        setState(() => _isLoading = false);
+        if (mounted) {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Erreur'),
+              content: Text('Impossible d\'enregistrer le bien: ${e.toString()}'),
+              actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+            ),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+
     setState(() => _isLoading = true);
 
     debugPrint('⏳ Envoi d\'invitation vers: ${_emailController.text.trim()} pour bien ${widget.bien.appwriteId}');
@@ -74,8 +120,35 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
     try {
       final invitationService = widget.ref.read(invitationServiceProvider);
 
+      // Debug: log the bien id we're about to use
+      debugPrint('Modal: sending invitation for bien.appwriteId=${targetBien.appwriteId}, bien.nom=${targetBien.nom}');
+
+      // Verify the bien exists in Appwrite (helpful if the local model is stale)
+      if (targetBien.appwriteId != null && targetBien.appwriteId!.isNotEmpty) {
+        try {
+          final bienRepository = widget.ref.read(bienRepositoryProvider);
+          final fresh = await bienRepository.getBienById(targetBien.appwriteId!);
+          targetBien = fresh;
+          debugPrint('Modal: bien verified on server: ${fresh.appwriteId}');
+        } catch (e) {
+          debugPrint('Modal: failed to verify bien on server: $e');
+          setState(() => _isLoading = false);
+          if (mounted) {
+            await showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Bien introuvable'),
+                content: const Text('Le bien sélectionné semble introuvable sur le serveur. Veuillez rafraîchir la liste.'),
+                actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+              ),
+            );
+          }
+          return;
+        }
+      }
+
       final result = await invitationService.createInvitation(
-        bien: widget.bien,
+        bien: targetBien,
         emailLocataire: _emailController.text.trim(),
         nomLocataire: _nomController.text.trim().isNotEmpty
             ? _nomController.text.trim()
@@ -292,6 +365,23 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
               ),
               const SizedBox(height: 16),
 
+              if (widget.bien.appwriteId == null || widget.bien.appwriteId!.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Le bien doit être enregistré avant d\'envoyer une invitation.',
+                          style: TextStyle(color: Colors.orange.shade700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Nom et Prénom
               Row(
                 children: [
@@ -364,7 +454,7 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
 
               // Bouton envoyer
               ElevatedButton.icon(
-                onPressed: _isLoading ? null : _sendInvitation,
+                onPressed: (_isLoading || widget.bien.appwriteId == null || widget.bien.appwriteId!.isEmpty) ? null : _sendInvitation,
                 icon: _isLoading
                     ? const SizedBox(
                         width: 20,

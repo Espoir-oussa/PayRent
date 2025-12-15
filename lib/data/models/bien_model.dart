@@ -65,6 +65,7 @@ class BienModel {
       adresse: json['adresse'] ?? '',
       type: json['type'],
       description: json['description'],
+      photosUrls: _parsePhotosFromJson(json['photosUrls']),
       surface: (json['surface'] as num?)?.toDouble(),
       nombrePieces: json['nombrePieces'],
       nombreChambres: json['nombreChambres'],
@@ -123,11 +124,25 @@ class BienModel {
       'proprietaireId': proprietaireId,
       'nom': nom,
       'adresse': adresse,
+      'photosUrls': photosUrls,
       'type': type,
       'loyerMensuel': loyerMensuel,
       'charges': charges,
       'statut': statut,
     };
+  }
+
+  static List<String>? _parsePhotosFromJson(dynamic value) {
+    if (value == null) return null;
+    if (value is List) return value.map((e) => e.toString()).toList();
+    if (value is String && value.isNotEmpty) {
+      // Could be comma-separated or a single url
+      if (value.contains(',')) {
+        return value.split(',').where((s) => s.trim().isNotEmpty).toList();
+      }
+      return [value];
+    }
+    return null;
   }
 
   /// Convertir en Map pour Appwrite
