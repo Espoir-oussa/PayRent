@@ -16,6 +16,7 @@ class Environment {
   static const String plaintesCollectionId = 'plaintes';
   static const String facturesCollectionId = 'factures';
   static const String invitationsCollectionId = 'invitations';
+  static const String notificationsCollectionId = 'notifications';
   
   // Storage Buckets
   static const String imagesBucketId = 'images';

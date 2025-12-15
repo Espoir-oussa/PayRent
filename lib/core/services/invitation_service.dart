@@ -16,7 +16,9 @@ import 'email_service.dart';
 class InvitationResult {
   final InvitationModel invitation;
   final bool emailSent;
-  InvitationResult({required this.invitation, required this.emailSent});
+  final bool targetUserExists;
+
+  InvitationResult({required this.invitation, required this.emailSent, required this.targetUserExists});
 }
 
 class InvitationService {
@@ -171,7 +173,39 @@ class InvitationService {
       final invitationLink = _buildInvitationLink(token);
       debugPrint('🔗 Lien d\'invitation: $invitationLink');
 
-      return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), emailSent: emailSent);
+      // Vérifier si l'email cible possède déjà un compte dans la collection users
+      bool targetUserExists = false;
+      try {
+        final users = await _appwriteService.listDocuments(
+          collectionId: Environment.usersCollectionId,
+          queries: [Query.equal('email', emailLocataire)],
+        );
+        if (users.documents.isNotEmpty) {
+          targetUserExists = true;
+          final targetUserId = users.documents.first.$id;
+
+          // Créer une notification in-app pour l'utilisateur ciblé
+          await _appwriteService.createDocument(
+            collectionId: Environment.notificationsCollectionId,
+            data: {
+              'userId': targetUserId,
+              'title': 'Nouvelle invitation',
+              'body': 'Vous avez reçu une invitation pour ${bien.nom}',
+              'data': {
+                'token': token,
+                'bienId': bien.appwriteId,
+              },
+              'isRead': false,
+              'createdAt': DateTime.now().toIso8601String(),
+            },
+            documentId: ID.unique(),
+          );
+        }
+      } catch (e) {
+        debugPrint('Erreur check/create notification: $e');
+      }
+
+      return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), emailSent: emailSent, targetUserExists: targetUserExists);
     } on AppwriteException catch (e) {
       final msg = e.message?.toLowerCase() ?? '';
       if (msg.contains('invalid query') || msg.contains('equal queries require')) {

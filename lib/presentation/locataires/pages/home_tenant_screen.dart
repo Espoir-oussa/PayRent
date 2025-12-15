@@ -20,6 +20,7 @@ import '../../shared/pages/no_connection_page.dart';
 import '../../shared/widgets/shared_profile_form.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../config/environment.dart';
+import '../../../data/models/bien_model.dart';
 // Ajoutez cet import
 import '../../proprietaires/pages/profile_screen.dart';
 
@@ -54,6 +55,43 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   bool _isSaving = false;
   bool _isUploadingImage = false;
 
+  // Logement du locataire
+  BienModel? _currentBien;
+  bool _isLoadingBien = true;
+
+  Future<void> _loadTenantBien(String userId) async {
+    try {
+      final appwriteService = ref.read(appwriteServiceProvider);
+      final databases = Databases(appwriteService.client);
+      final contracts = await databases.listDocuments(
+        databaseId: Environment.databaseId,
+        collectionId: Environment.contratsCollectionId,
+        queries: [Query.equal('locataireId', userId), Query.equal('statut', 'actif')],
+      );
+      if (contracts.documents.isNotEmpty) {
+        final contract = contracts.documents.first;
+        final bienId = contract.data['bienId']?.toString();
+        if (bienId != null && bienId.isNotEmpty) {
+          try {
+            final doc = await databases.getDocument(
+              databaseId: Environment.databaseId,
+              collectionId: Environment.biensCollectionId,
+              documentId: bienId,
+            );
+            final bien = BienModel.fromAppwrite(doc);
+            if (mounted) setState(() => _currentBien = bien);
+          } catch (e) {
+            debugPrint('Erreur chargement bien: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Erreur chargement contrats: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingBien = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +107,8 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
           _userName = user.name;
           _isLoading = false;
         });
+        // Charger le bien lié via contrat (non bloquant)
+        _loadTenantBien(user.$id);
       }
       // Charger le profil depuis la collection users
       try {
@@ -436,42 +476,63 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryDark.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.home, color: AppColors.primaryDark),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              child: _isLoadingBien
+                  ? const Center(child: Text('Chargement...'))
+                  : _currentBien != null
+                      ? Row(
                           children: [
-                            Text(
-                              'Chargement...',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            if (_currentBien!.photosUrls != null && _currentBien!.photosUrls!.isNotEmpty)
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  image: DecorationImage(
+                                    image: NetworkImage(_currentBien!.photosUrls!.first),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryDark.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(Icons.home, color: AppColors.primaryDark),
+                              ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _currentBien!.nom,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _currentBien!.adresse,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Loyer: ${_currentBien!.loyerMensuel.toStringAsFixed(0)} €',
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
                               ),
                             ),
-                            Text(
-                              'Informations du logement',
-                              style: TextStyle(color: Colors.grey),
-                            ),
                           ],
+                        )
+                      : const Center(
+                          child: Text('Aucun logement associé'),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
             ),
           ),
           const SizedBox(height: 24),

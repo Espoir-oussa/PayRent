@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../config/colors.dart';
+import '../../../core/di/providers.dart';
 
 /// AppBar partagée qui s'adapte au rôle de l'utilisateur
 /// Peut être utilisée à la fois par propriétaire et locataire
-class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
+class SharedAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String currentRole; // 'owner' ou 'tenant'
   final VoidCallback? onNotificationsPressed;
   final VoidCallback? onProfilePressed;
@@ -22,7 +24,9 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(80);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unreadAsync = ref.watch(unreadNotificationsCountProvider);
+
     return AppBar(
       backgroundColor: AppColors.accentRed,
       foregroundColor: AppColors.textLight,
@@ -59,18 +63,28 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
               padding: const EdgeInsets.all(8),
             ),
             Positioned(
-              right: 10,
+              right: 6,
               top: 10,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: AppColors.accentRed,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 12,
-                  minHeight: 12,
-                ),
+              child: unreadAsync.when(
+                data: (count) => count > 0
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          count.toString(),
+                          style: const TextStyle(
+                            color: AppColors.accentRed,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
               ),
             ),
           ],

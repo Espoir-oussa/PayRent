@@ -43,17 +43,11 @@ class _InvitationModalContent extends StatefulWidget {
 class _InvitationModalContentState extends State<_InvitationModalContent> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _nomController = TextEditingController();
-  final _prenomController = TextEditingController();
-  final _telephoneController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _nomController.dispose();
-    _prenomController.dispose();
-    _telephoneController.dispose();
     super.dispose();
   }
 
@@ -150,15 +144,6 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
       final result = await invitationService.createInvitation(
         bien: targetBien,
         emailLocataire: _emailController.text.trim(),
-        nomLocataire: _nomController.text.trim().isNotEmpty
-            ? _nomController.text.trim()
-            : null,
-        prenomLocataire: _prenomController.text.trim().isNotEmpty
-            ? _prenomController.text.trim()
-            : null,
-        telephoneLocataire: _telephoneController.text.trim().isNotEmpty
-            ? _telephoneController.text.trim()
-            : null,
       );
 
       debugPrint('✅ Invitation créée: token=${result.invitation.token}, emailSent=${result.emailSent}');
@@ -189,20 +174,31 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
                 if (result.emailSent)
                   Text(
                     '✅ Email envoyé à ${_emailController.text.trim()}',
-                    style: TextStyle(color: Colors.green.shade700, fontSize: 13),
+                    style: TextStyle(color: Colors.green.shade700, fontSize: 12),
                   )
                 else
                   Text(
                     '⚠️ L\'email n\'a pas pu être envoyé. Partagez le lien ci-dessous.',
-                    style: TextStyle(color: Colors.orange.shade700, fontSize: 13),
+                    style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
                   ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 6),
+                // Indiquer si l'utilisateur cible possède l'application
+                if (!result.targetUserExists)
+                  Text(
+                    'ℹ️ Cet email n\'est pas associé à un utilisateur PayRent. L\'utilisateur ne semble pas utiliser l\'application.',
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                  )
+                else
+                  Text(
+                    '✅ Utilisateur trouvé et notifié dans l\'application.',
+                    style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+                  ),
+                const SizedBox(height: 12),
                 const Text(
                   'Partagez ce lien avec le locataire (WhatsApp, SMS...) :',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 ),
-                const SizedBox(height: 8),
-                Container(
+                const SizedBox(height: 8),                Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
@@ -214,14 +210,15 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
                       SelectableText(
                         invitationLink,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Colors.grey.shade700,
                       fontFamily: 'monospace',
                     ),
                       ),
                       const SizedBox(height: 8),
-                      Text('Token:', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                      SelectableText(result.invitation.token, style: TextStyle(fontFamily: 'monospace', fontSize: 13)),
+                      Text('Token:', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      SelectableText(result.invitation.token, style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
+
                     ],
                   ),
                 ),
@@ -248,6 +245,9 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
             ],
           ),
         );
+
+        // Rafraîchir le compteur de notifications non lues
+        widget.ref.invalidate(unreadNotificationsCountProvider);
 
         Navigator.pop(context, result.invitation);
       }
@@ -321,13 +321,14 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
                       children: [
                         Text(
                           'Inviter un locataire',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 18,
                               ),
                         ),
                         Text(
                           widget.bien.nom,
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                         ),
                       ],
                     ),
@@ -346,7 +347,9 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
                   labelText: 'Email du locataire *',
+                  labelStyle: const TextStyle(fontSize: 13),
                   hintText: 'exemple@email.com',
+                  hintStyle: const TextStyle(fontSize: 12),
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -382,53 +385,7 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
                   ),
                 ),
 
-              // Nom et Prénom
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _prenomController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        labelText: 'Prénom',
-                        prefixIcon: const Icon(Icons.person_outline),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _nomController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: InputDecoration(
-                        labelText: 'Nom',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
 
-              // Téléphone
-              TextFormField(
-                controller: _telephoneController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: 'Téléphone',
-                  hintText: '+229 XX XX XX XX',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
 
               // Info loyer
               Container(
