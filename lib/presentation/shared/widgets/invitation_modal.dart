@@ -146,15 +146,10 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
         emailLocataire: _emailController.text.trim(),
       );
 
-      debugPrint('✅ Invitation créée: token=${result.invitation.token}, emailSent=${result.emailSent}');
+      debugPrint('✅ Invitation créée: token=${result.invitation.token}');
 
       if (mounted) {
-        // Afficher le lien à partager
-        final invitationLink = 'payrent://accept-invitation?token=${result.invitation.token}';
-        // Print more debug info for developers
-        debugPrint('🔗 Invitation link (modal): $invitationLink');
-        debugPrint('🔑 Invitation token (modal): ${result.invitation.token}');
-
+        // Afficher un message indiquant que l'invitation a été envoyée via notification in-app
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -170,70 +165,18 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Afficher le statut de l'email
-                if (result.emailSent)
-                  Text(
-                    '✅ Email envoyé à ${_emailController.text.trim()}',
-                    style: TextStyle(color: Colors.green.shade700, fontSize: 12),
-                  )
-                else
-                  Text(
-                    '⚠️ L\'email n\'a pas pu être envoyé. Partagez le lien ci-dessous.',
-                    style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-                  ),
-                const SizedBox(height: 6),
-                // Indiquer si l'utilisateur cible possède l'application
-                if (!result.targetUserExists)
-                  Text(
-                    'ℹ️ Cet email n\'est pas associé à un utilisateur PayRent. L\'utilisateur ne semble pas utiliser l\'application.',
-                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
-                  )
-                else
-                  Text(
-                    '✅ Utilisateur trouvé et notifié dans l\'application.',
-                    style: TextStyle(color: Colors.green.shade700, fontSize: 12),
-                  ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Partagez ce lien avec le locataire (WhatsApp, SMS...) :',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                Text(
+                  '✅ Invitation envoyée via notification à ${_emailController.text.trim()}',
+                  style: TextStyle(color: Colors.green.shade700, fontSize: 12),
                 ),
-                const SizedBox(height: 8),                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SelectableText(
-                        invitationLink,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade700,
-                      fontFamily: 'monospace',
-                    ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Token:', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                      SelectableText(result.invitation.token, style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
-
-                    ],
-                  ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Le locataire recevra l\'invitation directement dans son compte PayRent (notifications in-app).',
+                  style: TextStyle(fontSize: 12),
                 ),
               ],
             ),
             actions: [
-              TextButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: invitationLink));
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Lien copié !')),
-                  );
-                },
-                child: const Text('Copier le lien'),
-              ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: ElevatedButton.styleFrom(
@@ -258,31 +201,49 @@ class _InvitationModalContentState extends State<_InvitationModalContent> {
 
       setState(() => _isLoading = false);
       if (mounted) {
-        await showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Erreur lors de l\'envoi'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(e.toString()),
-                  const SizedBox(height: 12),
-                  Text(
-                    st.toString().split('\n').take(5).join('\n'),
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
-              ),
+        final msg = e.toString();
+        // Cas spécial: email non associé à un utilisateur
+        if (msg.contains("n'est pas associé à un utilisateur") || msg.contains('n\'est pas associé')) {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Email non-utilisateur'),
+              content: const Text('Cet email n\'est pas associé à un utilisateur PayRent. Aucune invitation n\'a été créée ni envoyée.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Fermer'),
+          );
+        } else {
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Erreur lors de l\'envoi'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.toString()),
+                    const SizedBox(height: 12),
+                    Text(
+                      st.toString().split('\n').take(5).join('\n'),
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        );
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Fermer'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
   }

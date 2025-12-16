@@ -1,63 +1,7 @@
-name: Release APK
+# REMOVED: workflow 'Release APK'
+# Le workflow qui buildait l'APK et mettait à jour GitHub Pages a été désactivé.
+# Si besoin, il peut être ré-introduit manuellement, mais par défaut il est désactivé.
 
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  contents: write
-
-jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
-    env:
-      TARGET_RELEASE_REPO: Espoir-oussa/payrent-releases
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Ensure GH_RELEASES_TOKEN is set
-        run: |
-          if [ -z "${{ secrets.GH_RELEASES_TOKEN }}" ]; then
-            echo "GH_RELEASES_TOKEN secret is not set. Please add it to the repo (see RELEASING.md).";
-            exit 1;
-          fi
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Save tag to env
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: Update web_redirect/version.json on main
-        env:
-          TAG: ${{ env.TAG }}
-        run: |
-          version=${TAG#v}
-          echo "Updating web_redirect/version.json to version=$version"
-          git fetch origin main
-          git checkout main
-          git pull origin main
-          # update fields: version, releaseDate, apkUrl
-          apkUrl="https://github.com/${{ env.TARGET_RELEASE_REPO }}/releases/download/${TAG}/app-release.apk"
-          jq --arg v "$version" --arg date "$(date -I)" --arg apkUrl "$apkUrl" \
-            '.version=$v | .releaseDate=$date | .apkUrl=$apkUrl' web_redirect/version.json > web_redirect/version.tmp && mv web_redirect/version.tmp web_redirect/version.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web_redirect/version.json
-          git commit -m "chore: update web_redirect/version.json for ${TAG}" || echo "No changes to commit"
-          git push origin main
 
       - name: Upload APK as workflow artifact (debug)
         uses: actions/upload-artifact@v4

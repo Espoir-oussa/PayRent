@@ -17,4 +17,4 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Releases
 
-See [RELEASING.md](RELEASING.md) for instructions on automated APK releases and how to create a release tag.
+⚠️ La publication automatique d'APK et la page GitHub Pages associée ont été supprimées du dépôt. Les instructions de release ne sont plus disponibles ici.

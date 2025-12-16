@@ -21,10 +21,8 @@ class EmailConfig {
   // Nom de l'expéditeur
   static const String senderName = 'PayRent';
 
-  // URLs de l'application
+  // Schéma de deep link de l'application
   static const String appScheme = 'payrent';
-  static const String webBaseUrl =
-      'https://espoir-oussa.github.io/payrent-releases';
 }
 
 class EmailService {
@@ -46,16 +44,13 @@ class EmailService {
     final codeQuery = connectionCode != null ? '&code=$connectionCode' : '';
     final passQuery =
         temporaryPassword != null ? '&tempPass=$temporaryPassword' : '';
-    final acceptUrl =
-        '${EmailConfig.webBaseUrl}?token=$token&action=accept$codeQuery$passQuery';
-    final rejectUrl =
-        '${EmailConfig.webBaseUrl}?token=$token&action=reject$codeQuery$passQuery';
-
-    // Lien deep link pour l'app mobile
+    // Lien deep link pour l'app mobile (utilisé dans l'email)
     final appAcceptUrl =
         '${EmailConfig.appScheme}://accept-invitation?token=$token&action=accept$codeQuery$passQuery';
     final appRejectUrl =
         '${EmailConfig.appScheme}://accept-invitation?token=$token&action=reject$codeQuery$passQuery';
+
+    // Les liens web (GitHub Pages) ne sont plus utilisés car le site a été supprimé.
 
     final htmlContent = _buildInvitationEmailHtml(
       recipientName: recipientName,
@@ -66,8 +61,7 @@ class EmailService {
       loyerMensuel: loyerMensuel,
       charges: charges,
       messagePersonnalise: messagePersonnalise,
-      acceptUrl: acceptUrl,
-      rejectUrl: rejectUrl,
+
       appAcceptUrl: appAcceptUrl,
       appRejectUrl: appRejectUrl,
     );
@@ -201,8 +195,6 @@ class EmailService {
     required double loyerMensuel,
     double? charges,
     String? messagePersonnalise,
-    required String acceptUrl,
-    required String rejectUrl,
     required String appAcceptUrl,
     required String appRejectUrl,
   }) {
@@ -278,11 +270,11 @@ class EmailService {
       </p>
       
       <div style="text-align: center; margin: 35px 0;">
-        <a href="$acceptUrl" style="display: inline-block; background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; margin: 5px;">
-          ✓ Accepter l'invitation
+        <a href="$appAcceptUrl" style="display: inline-block; background: linear-gradient(135deg, #43a047 0%, #66bb6a 100%); color: white; text-decoration: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; margin: 5px;">
+          ✓ Accepter l'invitation (ouvrir l'app)
         </a>
         <br><br>
-        <a href="$rejectUrl" style="display: inline-block; background-color: #f5f5f5; color: #666; text-decoration: none; padding: 12px 30px; border-radius: 30px; font-weight: 500; font-size: 14px; border: 1px solid #ddd; margin: 5px;">
+        <a href="$appRejectUrl" style="display: inline-block; background-color: #f5f5f5; color: #666; text-decoration: none; padding: 12px 30px; border-radius: 30px; font-weight: 500; font-size: 14px; border: 1px solid #ddd; margin: 5px;">
           ✕ Refuser
         </a>
       </div>

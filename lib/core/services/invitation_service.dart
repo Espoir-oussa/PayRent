@@ -15,16 +15,13 @@ import 'email_service.dart';
 /// Résultat d'une création d'invitation, contenant l'invitation et si l'email a bien été envoyé
 class InvitationResult {
   final InvitationModel invitation;
-  final bool emailSent;
   final bool targetUserExists;
 
-  InvitationResult({required this.invitation, required this.emailSent, required this.targetUserExists});
+  InvitationResult({required this.invitation, required this.targetUserExists});
 }
 
 class InvitationService {
   final AppwriteService _appwriteService;
-  final EmailService _emailService = EmailService();
-
   InvitationService(this._appwriteService);
 
   /// Générer un token unique pour l'invitation
@@ -111,6 +108,16 @@ class InvitationService {
         throw Exception('Une invitation est déjà en attente pour cet email');
       }
 
+      // Vérifier si l'email cible possède déjà un compte dans la collection users
+      final usersCheck = await _appwriteService.listDocuments(
+        collectionId: Environment.usersCollectionId,
+        queries: [Query.equal('email', emailLocataire)],
+      );
+      if (usersCheck.documents.isEmpty) {
+        // Ne pas créer ni envoyer une invitation pour un email qui n'est pas associé à un utilisateur
+        throw Exception("L'email $emailLocataire n'est pas associé à un utilisateur PayRent. Aucune invitation ne sera créée ni envoyée.");
+      }
+
       // Créer le token unique
       final token = _generateToken();
       final now = DateTime.now();
@@ -147,44 +154,11 @@ class InvitationService {
         ],
       );
 
-      // Envoyer l'email d'invitation automatiquement
-      final recipientName = [prenomLocataire, nomLocataire]
-          .where((s) => s != null && s.isNotEmpty)
-          .join(' ');
-      
-      final emailSent = await _emailService.sendInvitationEmail(
-        recipientEmail: emailLocataire,
-        recipientName: recipientName,
-        proprietaireNom: proprietaireNom,
-        bienNom: bien.nom,
-        token: token,
-        loyerMensuel: bien.loyerMensuel,
-        charges: bien.charges,
-        messagePersonnalise: message,
-      );
-
-      if (emailSent) {
-        debugPrint('📧 Email d\'invitation envoyé à $emailLocataire');
-      } else {
-        debugPrint('⚠️ Échec de l\'envoi de l\'email, mais l\'invitation a été créée');
-      }
-
-      // Log le lien pour le développement
-      final invitationLink = _buildInvitationLink(token);
-      debugPrint('🔗 Lien d\'invitation: $invitationLink');
-
-      // Vérifier si l'email cible possède déjà un compte dans la collection users
-      bool targetUserExists = false;
+      // Créer une notification in-app pour l'utilisateur ciblé (pas d'email)
       try {
-        final users = await _appwriteService.listDocuments(
-          collectionId: Environment.usersCollectionId,
-          queries: [Query.equal('email', emailLocataire)],
-        );
-        if (users.documents.isNotEmpty) {
-          targetUserExists = true;
-          final targetUserId = users.documents.first.$id;
+        if (usersCheck.documents.isNotEmpty) {
+          final targetUserId = usersCheck.documents.first.$id;
 
-          // Créer une notification in-app pour l'utilisateur ciblé
           await _appwriteService.createDocument(
             collectionId: Environment.notificationsCollectionId,
             data: {
@@ -202,10 +176,10 @@ class InvitationService {
           );
         }
       } catch (e) {
-        debugPrint('Erreur check/create notification: $e');
+        debugPrint('Erreur création notification in-app: $e');
       }
 
-      return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), emailSent: emailSent, targetUserExists: targetUserExists);
+      return InvitationResult(invitation: InvitationModel.fromAppwrite(doc), targetUserExists: true);
     } on AppwriteException catch (e) {
       final msg = e.message?.toLowerCase() ?? '';
       if (msg.contains('invalid query') || msg.contains('equal queries require')) {

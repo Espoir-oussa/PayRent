@@ -1,14 +1,13 @@
 // Fichier : lib/main.dart (Mis à jour avec Appwrite, Deep Linking et Auto-Update)
 
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:app_links/app_links.dart';
 import 'config/theme.dart';
 import 'core/services/appwrite_service.dart';
-import 'core/services/update_service.dart';
+
 import 'presentation/shared/pages/splash_screen.dart';
 import 'presentation/proprietaires/pages/auth_screens/owner_login_screen.dart';
 import 'presentation/locataires/pages/accept_invitation_screen.dart';
@@ -37,7 +36,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   StreamSubscription<Uri>? _linkSubscription;
-  final UpdateService _updateService = UpdateService();
   final AppLinks _appLinks = AppLinks();
 
   @override
@@ -45,10 +43,7 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _initDeepLinks();
 
-    // Vérifier les mises à jour après le démarrage
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForUpdates();
-    });
+    // Les vérifications automatiques de mise à jour ont été supprimées.
   }
 
   @override
@@ -57,35 +52,7 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  /// Vérifier si une mise à jour est disponible
-  Future<void> _checkForUpdates() async {
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!Platform.isAndroid) return;
-
-    try {
-      final result = await _updateService.checkForUpdate();
-
-      if (result.updateAvailable && result.latestVersion != null) {
-        debugPrint(
-            '🔄 Mise à jour disponible: ${result.latestVersion!.version}');
-
-        final context = navigatorKey.currentContext;
-        if (context != null) {
-          UpdateService.showUpdateDialog(
-            context,
-            result.latestVersion!,
-            result.currentVersion,
-          );
-        }
-      } else {
-        debugPrint("✅ L'application est à jour (${result.currentVersion})");
-      }
-    } catch (e) {
-      debugPrint('⚠️ Impossible de vérifier les mises à jour: $e');
-    }
-  }
-
+  // Vérification des mises à jour et installation automatique supprimées.
   /// Initialiser le deep linking avec AppLinks
   Future<void> _initDeepLinks() async {
     // Lien initial

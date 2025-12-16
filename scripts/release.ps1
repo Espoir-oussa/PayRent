@@ -1,13 +1,9 @@
-# Script de release PayRent
-# Usage: .\scripts\release.ps1 -Version "1.0.2"
-# Ce script met a jour la version, build l'APK, et le publie sur GitHub
+# REMOVED: fichier `scripts/release.ps1`
+# Le système de génération d'APK et de déploiement GitHub Pages a été supprimé.
+# Ce fichier était responsable de la compilation de l'APK et du push vers le site de téléchargement.
+# Conserver ce fichier n'est plus nécessaire et il a été désactivé.
 
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$Version,
-    
-    [Parameter(Mandatory=$false)]
-    [string]$Changelog = "Ameliorations et corrections de bugs"
 )
 
 $ErrorActionPreference = "Stop"
