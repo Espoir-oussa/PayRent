@@ -67,10 +67,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     'maison',
     'studio',
     'villa',
-    'duplex',
-    'local_commercial',
     'bureau',
-    'terrain',
+    'commerce',
+    'autre',
   ];
 
   String _getTypeDisplay(String type) {
@@ -79,19 +78,15 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
       'maison': 'Maison',
       'studio': 'Studio',
       'villa': 'Villa',
-      'duplex': 'Duplex',
-      'local_commercial': 'Local commercial',
       'bureau': 'Bureau',
-      'terrain': 'Terrain',
+      'commerce': 'Commerce',
+      'autre': 'Autre',
     };
     return map[type] ?? type;
   }
 
   String _formatMontant(double montant) {
-    return '${montant.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]} ',
-        )} FCFA';
+    return '${montant.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} FCFA';
   }
 
   // Fonction pour supprimer un bien
@@ -198,8 +193,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     String? typeBien = bien.type;
     String loyer = bien.loyerMensuel.toStringAsFixed(0);
     String? description = bien.description;
-    String? imagePath =
-        bien.photosUrls?.isNotEmpty == true ? bien.photosUrls!.first : null;
+    String? imagePath = bien.photosUrls?.isNotEmpty == true
+        ? bien.photosUrls!.first
+        : null;
     final ImagePicker picker = ImagePicker();
     XFile? pickedImage;
 
@@ -238,12 +234,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         Expanded(
                           child: Text(
                             'Modifier le bien',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
                         IconButton(
@@ -285,13 +277,14 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                                 ),
                               )
                             : imagePath != null
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: _buildImageFromSource(
-                                        imagePath!,
-                                        fit: BoxFit.cover),
-                                  )
-                                : _buildImagePlaceholder(),
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: _buildImageFromSource(
+                                  imagePath!,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : _buildImagePlaceholder(),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -303,7 +296,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Nom du bien *',
                         prefixIcon: const Icon(Icons.home_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -320,7 +314,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Adresse *',
                         prefixIcon: const Icon(Icons.location_on_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -337,15 +332,18 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Type de bien *',
                         prefixIcon: const Icon(Icons.home_work_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
                       items: _typesBien
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(_getTypeDisplay(type)),
-                              ))
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(_getTypeDisplay(type)),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) => typeBien = value,
                     ),
@@ -358,7 +356,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Loyer mensuel (FCFA) *',
                         prefixIcon: const Icon(Icons.payments_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -380,7 +379,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Description',
                         prefixIcon: const Icon(Icons.description_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -448,11 +448,16 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.add_photo_alternate_outlined,
-            size: 40, color: Colors.grey.shade400),
+        Icon(
+          Icons.add_photo_alternate_outlined,
+          size: 40,
+          color: Colors.grey.shade400,
+        ),
         const SizedBox(height: 8),
-        Text('Ajouter une photo',
-            style: TextStyle(color: Colors.grey.shade600)),
+        Text(
+          'Ajouter une photo',
+          style: TextStyle(color: Colors.grey.shade600),
+        ),
       ],
     );
   }
@@ -571,19 +576,17 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                             color: AppColors.primaryDark.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.add_home,
-                              color: AppColors.primaryDark),
+                          child: Icon(
+                            Icons.add_home,
+                            color: AppColors.primaryDark,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
                             'Ajouter un bien',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ),
                         IconButton(
@@ -635,7 +638,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Nom du bien *',
                         prefixIcon: const Icon(Icons.home_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -651,7 +655,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Adresse *',
                         prefixIcon: const Icon(Icons.location_on_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -667,15 +672,18 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Type de bien *',
                         prefixIcon: const Icon(Icons.home_work_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
                       items: _typesBien
-                          .map((type) => DropdownMenuItem(
-                                value: type,
-                                child: Text(_getTypeDisplay(type)),
-                              ))
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(_getTypeDisplay(type)),
+                            ),
+                          )
                           .toList(),
                       onChanged: (value) => typeBien = value,
                       validator: (value) =>
@@ -689,7 +697,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Loyer mensuel (FCFA) *',
                         prefixIcon: const Icon(Icons.payments_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -711,7 +720,8 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                         labelText: 'Description (optionnel)',
                         prefixIcon: const Icon(Icons.description_outlined),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: Colors.grey.shade50,
                       ),
@@ -853,63 +863,64 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
 
   Widget _buildEmptyState() {
     return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryDark.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.home_work_outlined,
-                  size: 60,
-                  color: AppColors.primaryDark,
-                ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.primaryDark.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(height: 32),
-              Text(
-                'Aucun bien enregistré',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppColors.primaryDark,
-                      fontWeight: FontWeight.w700,
-                    ),
-                textAlign: TextAlign.center,
+              child: Icon(
+                Icons.home_work_outlined,
+                size: 60,
+                color: AppColors.primaryDark,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Ajoutez votre premier bien pour commencer\nà gérer vos locations',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 16,
-                  height: 1.5,
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Aucun bien enregistré',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.w700,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Ajoutez votre premier bien pour commencer\nà gérer vos locations',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            ElevatedButton.icon(
+              onPressed: _openAddBienModal,
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text(
+                'Ajouter un bien',
+                style: TextStyle(fontSize: 16),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryDark,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 18,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton.icon(
-                onPressed: _openAddBienModal,
-                icon: const Icon(Icons.add, size: 20),
-                label: const Text('Ajouter un bien',
-                    style: TextStyle(fontSize: 16)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryDark,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 2,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -930,17 +941,19 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                   children: [
                     Text(
                       'Mes Biens',
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: AppColors.primaryDark,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: AppColors.primaryDark,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${biens.length} propriété${biens.length > 1 ? 's' : ''}',
-                      style:
-                          TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -952,7 +965,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                     backgroundColor: AppColors.primaryDark,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -989,18 +1004,14 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => BienDetailScreen(bien: bien),
-          ),
+          MaterialPageRoute(builder: (context) => BienDetailScreen(bien: bien)),
         ).then((_) {
           ref.invalidate(proprietaireBiensProvider);
         });
       },
       child: Card(
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 3,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1010,23 +1021,28 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                          bien.photosUrls != null && bien.photosUrls!.isNotEmpty
-                              ? _buildImageFromSource(bien.photosUrls!.first, isThumbnail: true)
-                            : Container(
-                                color: AppColors.primaryDark.withOpacity(0.1),
-                                child: Icon(
-                                  Icons.home,
-                                  size: 50,
-                                  color: AppColors.primaryDark.withOpacity(0.5),
-                                ),
-                              ),
+                  bien.photosUrls != null && bien.photosUrls!.isNotEmpty
+                      ? _buildImageFromSource(
+                          bien.photosUrls!.first,
+                          isThumbnail: true,
+                        )
+                      : Container(
+                          color: AppColors.primaryDark.withOpacity(0.1),
+                          child: Icon(
+                            Icons.home,
+                            size: 50,
+                            color: AppColors.primaryDark.withOpacity(0.5),
+                          ),
+                        ),
                   // Badge type
                   Positioned(
                     top: 8,
                     left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.6),
                         borderRadius: BorderRadius.circular(8),
@@ -1052,8 +1068,11 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                           color: Colors.black.withOpacity(0.4),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.more_vert,
-                            color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.more_vert,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                       onSelected: (value) {
                         switch (value) {
@@ -1093,11 +1112,16 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline,
-                                  size: 20, color: Colors.red),
+                              Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.red,
+                              ),
                               SizedBox(width: 8),
-                              Text('Supprimer',
-                                  style: TextStyle(color: Colors.red)),
+                              Text(
+                                'Supprimer',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ],
                           ),
                         ),
@@ -1129,8 +1153,11 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
                   // Localisation
                   Row(
                     children: [
-                      Icon(Icons.location_on,
-                          size: 11, color: Colors.grey.shade600),
+                      Icon(
+                        Icons.location_on,
+                        size: 11,
+                        color: Colors.grey.shade600,
+                      ),
                       const SizedBox(width: 2),
                       Expanded(
                         child: Text(
@@ -1168,7 +1195,11 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     return const Center(child: CircularProgressIndicator());
   }
 
-  Widget _buildImageFromSource(String src, {BoxFit fit = BoxFit.cover, bool isThumbnail = false}) {
+  Widget _buildImageFromSource(
+    String src, {
+    BoxFit fit = BoxFit.cover,
+    bool isThumbnail = false,
+  }) {
     // If it's a remote URL, use Image.network
     final isUrl = src.startsWith('http://') || src.startsWith('https://');
     if (isUrl) {
@@ -1206,14 +1237,18 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     try {
       final file = File(src);
       if (file.existsSync()) {
-        return Image.file(file, fit: fit, errorBuilder: (_, __, ___) => Container(
-          color: AppColors.primaryDark.withOpacity(0.1),
-          child: Icon(
-            Icons.home,
-            size: 50,
-            color: AppColors.primaryDark.withOpacity(0.5),
+        return Image.file(
+          file,
+          fit: fit,
+          errorBuilder: (_, __, ___) => Container(
+            color: AppColors.primaryDark.withOpacity(0.1),
+            child: Icon(
+              Icons.home,
+              size: 50,
+              color: AppColors.primaryDark.withOpacity(0.5),
+            ),
           ),
-        ));
+        );
       }
     } catch (_) {}
 
@@ -1248,9 +1283,9 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
             Text(
               'Erreur',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.red,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: Colors.red,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1283,19 +1318,30 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final biensAsync = ref.watch(proprietaireBiensProvider);
+    final currentUserIdAsync = ref.watch(currentUserIdProvider);
 
     return Scaffold(
       body: Stack(
         children: [
           biensAsync.when(
             data: (biens) {
+              // Filtrer côté UI pour s'assurer qu'on n'affiche que les biens du propriétaire courant
+              final currentUserId = currentUserIdAsync.asData?.value;
+              final filteredBiens = currentUserId == null
+                  ? <BienModel>[]
+                  : biens
+                        .where((b) => b.proprietaireId == currentUserId)
+                        .toList();
+
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                _prefetchThumbnails(biens);
+                _prefetchThumbnails(filteredBiens);
               });
-              if (biens.isEmpty) {
+
+              if (filteredBiens.isEmpty) {
                 return _buildEmptyState();
               }
-              return _buildBienList(biens);
+
+              return _buildBienList(filteredBiens);
             },
             loading: () => _buildLoadingState(),
             error: (error, _) => _buildErrorState(error.toString()),

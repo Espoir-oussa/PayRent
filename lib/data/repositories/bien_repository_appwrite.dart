@@ -17,13 +17,24 @@ class BienRepositoryAppwrite implements BienRepository {
   Future<List<BienModel>> getBiensByProprietaire(String proprietaireId) async {
     try {
       debugPrint('🔍 Recherche des biens pour proprietaireId: $proprietaireId');
-      
+
+      // 🔐 AJOUTE CETTE VÉRIFICATION DE SÉCURITÉ
+    final currentUser = await _appwriteService.getCurrentUser();
+    if (currentUser == null) {
+      debugPrint('🚨 Utilisateur non connecté');
+      return [];
+    }
+    
+    // Vérifier que l'utilisateur demande bien SES biens
+    if (currentUser.$id != proprietaireId) {
+      debugPrint('🚨 ALERTE SECURITE: User ${currentUser.$id} tente d\'accéder aux biens de $proprietaireId');
+      return []; // Retourne liste vide pour les autres utilisateurs
+    }
+
       // Requête filtrée par proprietaireId
       final result = await _appwriteService.listDocuments(
         collectionId: Environment.biensCollectionId,
-        queries: [
-          Query.equal('proprietaireId', proprietaireId),
-        ],
+        queries: [Query.equal('proprietaireId', proprietaireId)],
       );
 
       debugPrint('📦 Documents trouvés: ${result.documents.length}');
@@ -31,12 +42,14 @@ class BienRepositoryAppwrite implements BienRepository {
       final biens = result.documents
           .map((doc) {
             final bien = BienModel.fromAppwrite(doc);
-            debugPrint('  - Bien: ${bien.nom}, proprietaireId: ${bien.proprietaireId}');
+            debugPrint(
+              '  - Bien: ${bien.nom}, proprietaireId: ${bien.proprietaireId}',
+            );
             return bien;
           })
           .where((bien) => bien.proprietaireId == proprietaireId)
           .toList();
-      
+
       debugPrint('✅ Biens filtrés: ${biens.length}');
       return biens;
     } on AppwriteException catch (e) {
@@ -59,43 +72,123 @@ class BienRepositoryAppwrite implements BienRepository {
   }
 
   @override
-  Future<BienModel> createBien(BienModel bien) async {
-    try {
-      // Récupérer l'utilisateur courant pour les permissions
-      final currentUser = await _appwriteService.getCurrentUser();
-      if (currentUser == null) {
-        throw Exception('Utilisateur non connecté');
-      }
+Future<BienModel> createBien(BienModel bien) async {
+  try {
+    debugPrint('🎯 DEBUT createBien');
+    
+    // Récupérer l'utilisateur courant
+    final currentUser = await _appwriteService.getCurrentUser();
+    if (currentUser == null) {
+      debugPrint('❌ ERREUR: Utilisateur non connecté');
+      throw Exception('Utilisateur non connecté');
+    }
 
+    debugPrint('👤 User ID: ${currentUser.$id}');
+    debugPrint('🏠 Bien à créer: ${bien.nom}');
+
+    // 1. Préparer les données
+    final Map<String, dynamic> dataToSend = {
+      'proprietaireId': currentUser.$id, // FORCER le proprietaireId
+      'nom': bien.nom,
+      'adresse': bien.adresse,
+      'type': bien.type ?? 'appartement',
+      'description': bien.description ?? '',
+      'loyerMensuel': bien.loyerMensuel,
+      'charges': bien.charges ?? 0.0,
+      'caution': bien.caution ?? 0.0,
+      'statut': bien.statut ?? 'disponible',
+      'photosUrls': bien.photosUrls?.join(',') ?? '',
+      'equipements': bien.equipements?.join(',') ?? '',
+      'createdAt': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    debugPrint('📦 Données à envoyer:');
+    dataToSend.forEach((key, value) {
+      debugPrint('   $key: $value');
+    });
+
+    // 2. ESSAYER SANS PERMISSIONS
+    debugPrint('🔐 Tentative de création SANS permissions...');
+    
+    try {
       final doc = await _appwriteService.createDocument(
         collectionId: Environment.biensCollectionId,
-        data: bien.toAppwrite(),
-        permissions: [
-          Permission.read(Role.user(currentUser.$id)),
-          Permission.update(Role.user(currentUser.$id)),
-          Permission.delete(Role.user(currentUser.$id)),
-        ],
+        data: dataToSend,
+        permissions: null, // PAS de permissions
       );
 
-      return BienModel.fromAppwrite(doc);
+      debugPrint('✅ SUCCÈS! Document créé: ${doc.$id}');
+      
+      final createdBien = BienModel.fromAppwrite(doc);
+      debugPrint('🏠 Bien créé: ${createdBien.nom}');
+      debugPrint('   proprietaireId: ${createdBien.proprietaireId}');
+      
+      return createdBien;
+      
     } on AppwriteException catch (e) {
-      throw Exception('Erreur création du bien: ${e.message}');
+      debugPrint('❌ ERREUR Appwrite: ${e.message}');
+      debugPrint('   Code: ${e.code}');
+      debugPrint('   Type: ${e.type}');
+      
+      // Si erreur de permissions, essayer avec permissions vides
+      if (e.message?.contains('permission') == true) {
+        debugPrint('🔄 Essai avec permissions vides...');
+        
+        final doc = await _appwriteService.createDocument(
+          collectionId: Environment.biensCollectionId,
+          data: dataToSend,
+          permissions: <String>[], // Liste vide
+        );
+        
+        debugPrint('✅ Créé avec permissions vides: ${doc.$id}');
+        return BienModel.fromAppwrite(doc);
+      }
+      
+      rethrow;
     }
+    
+  } catch (e) {
+    debugPrint('💥 ERREUR FATALE dans createBien: $e');
+    debugPrint('💥 StackTrace: ${e.toString()}');
+    rethrow;
   }
+}
 
   @override
-  Future<BienModel> updateBien(String bienId, BienModel bien) async {
-    try {
-      final doc = await _appwriteService.updateDocument(
-        collectionId: Environment.biensCollectionId,
-        documentId: bienId,
-        data: bien.toAppwrite(),
-      );
-      return BienModel.fromAppwrite(doc);
-    } on AppwriteException catch (e) {
-      throw Exception('Erreur mise à jour du bien: ${e.message}');
+Future<BienModel> updateBien(String bienId, BienModel bien) async {
+  try {
+    debugPrint('🎯 DEBUT updateBien pour ID: $bienId');
+    debugPrint('🏠 Bien: ${bien.nom}');
+    
+    final currentUser = await _appwriteService.getCurrentUser();
+    if (currentUser != null) {
+      debugPrint('👤 User actuel: ${currentUser.$id}');
+      debugPrint('👤 Proprietaire du bien: ${bien.proprietaireId}');
     }
+    
+    // Ajouter updatedAt
+    final dataToSend = Map<String, dynamic>.from(bien.toAppwrite())
+      ..['updatedAt'] = DateTime.now().toIso8601String();
+    
+    debugPrint('📦 Données de mise à jour: $dataToSend');
+    
+    final doc = await _appwriteService.updateDocument(
+      collectionId: Environment.biensCollectionId,
+      documentId: bienId,
+      data: dataToSend,
+    );
+    
+    debugPrint('✅ Bien mis à jour: ${doc.$id}');
+    return BienModel.fromAppwrite(doc);
+    
+  } on AppwriteException catch (e) {
+    debugPrint('❌ Erreur mise à jour: ${e.message}');
+    debugPrint('   Code: ${e.code}');
+    debugPrint('   Type: ${e.type}');
+    throw Exception('Erreur mise à jour du bien: ${e.message}');
   }
+}
 
   @override
   Future<void> deleteBien(String bienId) async {

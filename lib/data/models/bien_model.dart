@@ -147,27 +147,27 @@ class BienModel {
 
   /// Convertir en Map pour Appwrite
   Map<String, dynamic> toAppwrite() {
-    return {
-      'proprietaireId': proprietaireId,
-      'nom': nom,
-      'adresse': adresse,
-      'type': type ?? 'appartement',
-      'description': description ?? '',
-      'surface': surface,
-      'nombrePieces': nombrePieces,
-      'nombreChambres': nombreChambres,
-      'nombreSallesDeBain': nombreSallesDeBain,
-      'loyerMensuel': loyerMensuel,
-      'charges': charges ?? 0.0,
-      'caution': caution ?? 0.0,
-      'statut': statut ?? 'disponible',
-      'photosUrls': photosUrls?.join(',') ?? '',
-      'equipements': equipements?.join(',') ?? '',
-      'createdAt':
-          createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-    };
-  }
+  final now = DateTime.now().toIso8601String();
+  return {
+    'proprietaireId': proprietaireId,
+    'nom': nom,
+    'adresse': adresse,
+    'type': type ?? 'appartement',
+    'description': description ?? '',
+    'surface': surface,
+    'nombrePieces': nombrePieces,
+    'nombreChambres': nombreChambres,
+    'nombreSallesDeBain': nombreSallesDeBain,
+    'loyerMensuel': loyerMensuel,
+    'charges': charges ?? 0.0,
+    'caution': caution ?? 0.0,
+    'statut': statut ?? 'disponible',
+    'photosUrls': photosUrls?.join(',') ?? '',
+    'equipements': equipements?.join(',') ?? '',
+    'createdAt': createdAt?.toIso8601String() ?? now, // IMPORTANT
+    'updatedAt': now, // IMPORTANT
+  };
+}
 
   /// Créer une copie avec des modifications
   BienModel copyWith({

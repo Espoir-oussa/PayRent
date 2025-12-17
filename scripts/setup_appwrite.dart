@@ -98,10 +98,10 @@ Future<void> createCollection(
       'collectionId': collectionId,
       'name': name,
       'permissions': [
-        'read("users")',
+        'read("user:{userId}")',
         'create("users")',
-        'update("users")',
-        'delete("users")',
+        'update("user:{userId}")',
+        'delete("user:{userId}")',
       ],
       'documentSecurity': true,
     });

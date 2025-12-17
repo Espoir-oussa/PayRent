@@ -303,11 +303,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           filename:
               'profile_${_userId ?? 'user'}_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
-        permissions: [
+        permissions: _appwriteService.normalizePermissions([
           Permission.read(Role.any()), // Lecture publique pour afficher l'image
           Permission.update(Role.user(_userId!)),
           Permission.delete(Role.user(_userId!)),
-        ],
+        ]),
       );
 
       // Construire l'URL de l'image

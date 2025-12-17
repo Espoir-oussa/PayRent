@@ -3,6 +3,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/local_cache.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import '../../presentation/proprietaires/controllers/owner_login_controller.dart';
 import '../../presentation/proprietaires/states/owner_login_state.dart';
@@ -40,7 +41,6 @@ import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
 import '../../domain/usecases/auth/owner_register_usecase.dart';
 import '../../config/environment.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // =================================================================
 // 1. PROVIDERS DE BASE (CORE)
@@ -178,6 +178,11 @@ final ownerRegisterControllerProvider =
 final currentUserIdProvider = FutureProvider<String?>((ref) async {
   final appwriteService = ref.watch(appwriteServiceProvider);
   final user = await appwriteService.getCurrentUser();
+  if (user == null) {
+    debugPrint('🔐 currentUserIdProvider: USER NULL');
+  } else {
+    debugPrint('🔐 currentUserIdProvider: User ID = ${user.$id}');
+  }
   return user?.$id;
 });
 
@@ -228,29 +233,104 @@ final selectedRoleProvider = StateNotifierProvider<SelectedRoleNotifier, String>
   return SelectedRoleNotifier(ref);
 });
 
-// Provider pour récupérer les biens du propriétaire
+// =================================================================
+// 6. PROVIDER PRINCIPAL - CACHE DÉSACTIVÉ POUR DEBUG
+// =================================================================
 
 final proprietaireBiensProvider =
     FutureProvider.autoDispose<List<BienModel>>((ref) async {
+  debugPrint('🎯🎯🎯 DEBUT proprietaireBiensProvider 🎯🎯🎯');
+  
+  final userId = await ref.watch(currentUserIdProvider.future);
+  
+  if (userId == null) {
+    debugPrint('❌❌❌ USER NULL - Retourne liste vide');
+    return <BienModel>[];
+  }
+
+  debugPrint('🎯 Provider appelé pour USER: $userId');
+  
+  final bienRepository = ref.watch(bienRepositoryProvider);
+  
+  try {
+    debugPrint('🔍 Appel à getBiensByProprietaire($userId)...');
+    final biens = await bienRepository.getBiensByProprietaire(userId);
+    
+    debugPrint('📊 NOMBRE TOTAL DE BIENS REÇUS: ${biens.length}');
+    
+    // AFFICHER TOUS LES BIENS AVEC DÉTAILS
+    if (biens.isEmpty) {
+      debugPrint('📭 Liste vide - aucun bien trouvé');
+    } else {
+      for (var i = 0; i < biens.length; i++) {
+        final bien = biens[i];
+        final estAMoi = bien.proprietaireId == userId;
+        final emoji = estAMoi ? '✅' : '🚨';
+        debugPrint('   $emoji $i. ${bien.nom}');
+        debugPrint('      proprietaireId: ${bien.proprietaireId}');
+        debugPrint('      userId actuel: $userId');
+        debugPrint('      Appartient à moi? $estAMoi');
+      }
+    }
+    
+    // FILTRAGE MANUEL ULTRA-STRICT
+    final mesBiens = biens.where((bien) {
+      final estAMoi = bien.proprietaireId == userId;
+      if (!estAMoi) {
+        debugPrint('💥💥💥 BIEN ÉTRANGER DÉTECTÉ ET FILTRÉ:');
+        debugPrint('      Nom: ${bien.nom}');
+        debugPrint('      proprietaireId: ${bien.proprietaireId}');
+        debugPrint('      userId: $userId');
+      }
+      return estAMoi;
+    }).toList();
+    
+    final nbEtrangers = biens.length - mesBiens.length;
+    if (nbEtrangers > 0) {
+      debugPrint('⚠️⚠️⚠️ ALERTE: $nbEtrangers BIEN(S) ÉTRANGER(S) FILTRÉ(S)!');
+    }
+    
+    debugPrint('🎯 FIN Provider - Retourne ${mesBiens.length} biens');
+    debugPrint('🎯🎯🎯 FIN proprietaireBiensProvider 🎯🎯🎯\n');
+    
+    return mesBiens;
+    
+  } catch (e) {
+    debugPrint('❌❌❌ ERREUR dans provider: $e');
+    debugPrint('❌❌❌ StackTrace: ${e.toString()}');
+    return <BienModel>[];
+  }
+});
+
+// =================================================================
+// 7. PROVIDER SECOURS - UTILISE LES BIENS EXISTANTS
+// =================================================================
+
+final backupProprietaireBiensProvider = 
+    FutureProvider.autoDispose<List<BienModel>>((ref) async {
+  debugPrint('🔄🔄🔄 DEBUT backupProprietaireBiensProvider');
+  
   final userId = await ref.watch(currentUserIdProvider.future);
   if (userId == null) return <BienModel>[];
-
+  
   final bienRepository = ref.watch(bienRepositoryProvider);
-
-  final cache = LocalCache<List<BienModel>>(
-    cacheKey: 'proprietaire_biens_$userId',
-    fetcher: () async => bienRepository.getBiensByProprietaire(userId),
-    fromJson: (json) {
-      final list = (json['data'] as List?) ?? [];
-      return list
-          .map((e) => BienModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    },
-    toJson: (list) => {
-      'data': list.map((e) => e.toJson()).toList(),
-    },
-    revalidateDuration: const Duration(minutes: 5),
-  );
-
-  return cache.getData();
+  
+  try {
+    // Utilise searchBiens() pour récupérer TOUS les biens
+    debugPrint('🔍 Appel à searchBiens() (tous les biens)...');
+    final tousLesBiens = await bienRepository.searchBiens();
+    
+    debugPrint('📊 TOTAL BIENS DANS LA BASE: ${tousLesBiens.length}');
+    
+    // Filtrer manuellement
+    final mesBiens = tousLesBiens.where((b) => b.proprietaireId == userId).toList();
+    
+    debugPrint('✅ Mes biens: ${mesBiens.length}');
+    debugPrint('🚨 Biens des autres: ${tousLesBiens.length - mesBiens.length}');
+    
+    return mesBiens;
+  } catch (e) {
+    debugPrint('❌ Erreur backup: $e');
+    return [];
+  }
 });

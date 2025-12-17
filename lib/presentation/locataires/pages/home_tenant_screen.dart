@@ -21,7 +21,9 @@ import '../../shared/widgets/shared_profile_form.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../config/environment.dart';
 import '../../../data/models/bien_model.dart';
+import '../../../data/models/invitation_model.dart';
 // Ajoutez cet import
+import '../widgets/invitations_list_widget.dart';
 import '../../proprietaires/pages/profile_screen.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
@@ -58,6 +60,8 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   // Logement du locataire
   BienModel? _currentBien;
   bool _isLoadingBien = true;
+  List<InvitationModel> _pendingInvitations = [];
+  bool _isLoadingInvitations = true;
 
   Future<void> _loadTenantBien(String userId) async {
     try {
@@ -89,6 +93,42 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
       debugPrint('Erreur chargement contrats: $e');
     } finally {
       if (mounted) setState(() => _isLoadingBien = false);
+    }
+  }
+
+  Future<void> _loadPendingInvitationsForEmail(String email) async {
+    try {
+      setState(() => _isLoadingInvitations = true);
+      final invitationService = ref.read(invitationServiceProvider);
+      final invitations = await invitationService.getPendingInvitationsByEmail(email);
+      if (mounted) setState(() => _pendingInvitations = invitations);
+    } catch (e) {
+      debugPrint('Erreur chargement invitations: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingInvitations = false);
+    }
+  }
+
+  Future<void> _acceptPendingInvitation(InvitationModel invitation) async {
+    try {
+      final appwriteService = ref.read(appwriteServiceProvider);
+      final currentUser = await appwriteService.getCurrentUser();
+      if (currentUser == null) throw Exception('Utilisateur non connecté');
+
+      final invitationService = ref.read(invitationServiceProvider);
+      await invitationService.acceptInvitationAsExistingUser(token: invitation.token, userId: currentUser.$id);
+
+      // Refresh data: reload contract/bien and invitations
+      await _loadTenantBien(currentUser.$id);
+      if (_email.isNotEmpty) await _loadPendingInvitationsForEmail(_email);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invitation acceptée — logement associé.'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red));
     }
   }
 
@@ -129,6 +169,10 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                 _adresseController.text = doc.data['adresse'] ?? '';
                 _email = doc.data['email'] ?? user.email;
                 _photoUrl = doc.data['photoUrl'];
+                // Charger les invitations pendantes pour cet email (si présent)
+                if ((_email ?? '').isNotEmpty) {
+                  _loadPendingInvitationsForEmail(_email);
+                }
               });
             }
           } catch (e) {
@@ -149,6 +193,10 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                   _adresseController.text = doc.data['adresse'] ?? '';
                   _email = doc.data['email'] ?? user.email;
                   _photoUrl = doc.data['photoUrl'];
+                  // Charger les invitations pendantes pour cet email (si présent)
+                  if ((_email ?? '').isNotEmpty) {
+                    _loadPendingInvitationsForEmail(_email);
+                  }
                 });
               }
             }
@@ -256,7 +304,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
           path: picked.path,
           filename: 'profile_${_userDocId ?? _email}_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
-        permissions: [Permission.read(Role.any())],
+        permissions: appwriteService.normalizePermissions([Permission.read(Role.any())]),
       );
       final imageUrl = '${Environment.appwritePublicEndpoint}/storage/buckets/${Environment.imagesBucketId}/files/${file.$id}/view?project=${Environment.appwriteProjectId}';
       if (_userDocId != null) {
@@ -535,6 +583,27 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                         ),
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Invitations en attente (si présentes)
+          if (_isLoadingInvitations)
+            const Center(child: Text('Chargement des invitations...'))
+          else if (_pendingInvitations.isNotEmpty)
+            InvitationsListWidget(
+              invitations: _pendingInvitations,
+              onAccept: (inv) async => _acceptPendingInvitation(inv),
+              onReject: (inv) async {
+                try {
+                  final invitationService = ref.read(invitationServiceProvider);
+                  await invitationService.rejectInvitation(inv.token);
+                  // reload pending list
+                  if (_email.isNotEmpty) await _loadPendingInvitationsForEmail(_email);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitation refusée.'), backgroundColor: Colors.orange));
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red));
+                }
+              },
+            ),
           const SizedBox(height: 24),
 
           // Actions rapides

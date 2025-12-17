@@ -237,18 +237,31 @@ class AppwriteService {
   // MÉTHODES POUR LE STOCKAGE (IMAGES, DOCUMENTS)
   // ============================================================
 
+  /// Normalise une liste de permissions (Permission objects ou String)
+  List<String>? normalizePermissions(List<dynamic>? permissions) {
+    if (permissions == null) return null;
+    return permissions.map((p) {
+      final s = p is String ? p : p.toString();
+      // Supprimer les espaces après ':' et autour des virgules, puis trim
+      return s.replaceAllMapped(RegExp(r':\s+'), (m) => ':').replaceAll(RegExp(r'\s*,\s*'), ',').trim();
+    }).toList();
+  }
+
   /// Uploader un fichier
   Future<models.File> uploadFile({
     required String bucketId,
     required InputFile file,
     String? fileId,
-    List<String>? permissions,
+    List<dynamic>? permissions,
   }) async {
+    final permsToSend = normalizePermissions(permissions);
+    if (permsToSend != null) print('🔐 uploadFile -> permissions: $permsToSend');
+
     return await _storage.createFile(
       bucketId: bucketId,
       fileId: fileId ?? ID.unique(),
       file: file,
-      permissions: permissions,
+      permissions: permsToSend,
     );
   }
 

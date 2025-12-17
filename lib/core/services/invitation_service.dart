@@ -273,6 +273,115 @@ class InvitationService {
     }
   }
 
+  /// Récupérer les invitations en attente pour un email de locataire
+  Future<List<InvitationModel>> getPendingInvitationsByEmail(String email) async {
+    try {
+      final result = await _appwriteService.listDocuments(
+        collectionId: Environment.invitationsCollectionId,
+        queries: [
+          Query.equal('emailLocataire', email),
+          Query.equal('statut', 'pending'),
+          Query.orderDesc('dateCreation'),
+        ],
+      );
+
+      return result.documents
+          .map((doc) => InvitationModel.fromAppwrite(doc))
+          .toList();
+    } on AppwriteException catch (e) {
+      throw Exception('Erreur récupération des invitations: ${e.message}');
+    }
+  }
+
+  /// Accepter une invitation en tant qu'utilisateur existant (locataire connecté)
+  Future<void> acceptInvitationAsExistingUser({
+    required String token,
+    required String userId,
+  }) async {
+    try {
+      // 1. Récupérer l'invitation
+      final invitation = await getInvitationByToken(token);
+      if (invitation == null) {
+        throw Exception('Invitation non trouvée');
+      }
+
+      if (!invitation.canBeAccepted) {
+        if (invitation.isExpired) {
+          throw Exception('Cette invitation a expiré');
+        }
+        throw Exception('Cette invitation n\'est plus valide');
+      }
+
+      // 2. Créer le contrat de location pour l'utilisateur existant
+      await _appwriteService.createDocument(
+        collectionId: Environment.contratsCollectionId,
+        data: {
+          'bienId': invitation.bienId,
+          'locataireId': userId,
+          'proprietaireId': invitation.proprietaireId,
+          'dateDebut': DateTime.now().toIso8601String(),
+          'dateFin': null,
+          'loyerMensuel': invitation.loyerMensuel,
+          'charges': invitation.charges ?? 0,
+          'caution': 0,
+          'jourPaiement': 1,
+          'statut': 'actif',
+          'documentUrl': null,
+          'notes': invitation.message,
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+        permissions: [
+          Permission.read(Role.user(userId)),
+          Permission.read(Role.user(invitation.proprietaireId)),
+          Permission.update(Role.user(invitation.proprietaireId)),
+        ],
+      );
+
+      // 3. Mettre à jour le statut de l'invitation
+      await _appwriteService.updateDocument(
+        collectionId: Environment.invitationsCollectionId,
+        documentId: invitation.id!,
+        data: {'statut': 'accepted', 'locataireId': userId},
+      );
+
+      // 4. Mettre à jour le bien avec le locataire
+      await _appwriteService.updateDocument(
+        collectionId: Environment.biensCollectionId,
+        documentId: invitation.bienId,
+        data: {
+          'locataireId': userId,
+          'statut': 'occupe',
+          'updatedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      // 5. Notifier le propriétaire (in-app) — inclut lien vers le bien
+      try {
+        await _appwriteService.createDocument(
+          collectionId: Environment.notificationsCollectionId,
+          data: {
+            'userId': invitation.proprietaireId,
+            'title': 'Invitation acceptée',
+            'body': 'L\'invitation pour ${invitation.bienNom} a été acceptée',
+            'data': {
+              'token': token,
+              'bienId': invitation.bienId,
+              'action': 'view-bien'
+            },
+            'isRead': false,
+            'createdAt': DateTime.now().toIso8601String(),
+          },
+          documentId: ID.unique(),
+        );
+      } catch (e) {
+        debugPrint('Erreur création notification propriétaire: $e');
+      }
+    } on AppwriteException catch (e) {
+      throw Exception('Erreur lors de l\'acceptation: ${e.message}');
+    }
+  }
+
   /// Accepter une invitation (côté locataire)
   /// Crée le compte locataire et le contrat
   Future<UserModel> acceptInvitation({
