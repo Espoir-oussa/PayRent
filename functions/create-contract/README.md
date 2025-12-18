@@ -22,6 +22,10 @@ Deployment:
 1. Create a Function in Appwrite console with runtime Node.js (>=18), assign environment variables above.
 2. Upload `index.js` as the source and set entrypoint to `index.js`.
 
+Important: .tag file
+---------------------
+Appwrite requires a file named `.tag` inside the function code archive that contains the runtime tag (e.g. `node-18.0`). The deploy scripts zip the `functions/create-contract/` directory and will include `.tag` so Appwrite can detect the runtime correctly.
+
 Deployment helper scripts are included in the repository:
 - `functions/deploy/deploy_function.sh` (bash) and `functions/deploy/deploy_function.ps1` (PowerShell).
 

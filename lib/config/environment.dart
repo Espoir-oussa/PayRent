@@ -17,6 +17,10 @@ class Environment {
   static const String facturesCollectionId = 'factures';
   static const String invitationsCollectionId = 'invitations';
   static const String notificationsCollectionId = 'notifications';
+
+  // Function IDs
+  // Remplacez par l'ID réel de la fonction Appwrite après déploiement
+  static const String createContractFunctionId = '69438e9600100260ed7e';
   
   // Storage Buckets
   static const String imagesBucketId = 'images';
