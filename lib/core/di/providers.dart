@@ -1,6 +1,7 @@
 // Fichier : lib/core/di/providers.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // AJOUTER CET IMPORT
 import '../services/local_cache.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,7 @@ import '../services/image_upload_service.dart';
 import '../services/invitation_service.dart';
 import '../services/password_reset_service.dart';
 import '../services/notification_service.dart';
+import '../services/auth_state_service.dart';
 
 // 2. Data
 import '../../data/repositories/plainte_repository_impl.dart';
@@ -29,6 +31,8 @@ import '../../data/repositories/paiement_repository_appwrite.dart';
 import '../../data/repositories/plainte_repository_appwrite.dart';
 import '../../data/repositories/facture_repository_appwrite.dart';
 import '../../data/models/bien_model.dart';
+import '../../data/models/invitation_model.dart';
+import '../../data/models/user_model.dart';
 
 // 3. Domain
 import '../../domain/repositories/plainte_repository.dart';
@@ -77,16 +81,189 @@ final notificationServiceProvider = Provider((ref) {
   return NotificationService(client);
 });
 
-// Provider du nombre de notifications non lues pour l'utilisateur courant
-final unreadNotificationsCountProvider = FutureProvider.autoDispose<int>((ref) async {
-  final userId = await ref.watch(currentUserIdProvider.future);
-  if (userId == null) return 0;
-  final notifService = ref.watch(notificationServiceProvider);
-  return notifService.unreadCountForUser(userId);
+// Provider pour SharedPreferences (FutureProvider car c'est asynchrone)
+final sharedPreferencesProvider = FutureProvider<SharedPreferences>((ref) async {
+  return await SharedPreferences.getInstance();
 });
 
 // =================================================================
-// 2. PROVIDERS DES REPOSITORIES (DATA)
+// 2. PROVIDERS POUR L'AUTHENTIFICATION ET UTILISATEUR COURANT
+// =================================================================
+
+// Provider de l'état d'authentification
+final authStateProvider = StateNotifierProvider<AuthStateController, AuthState>((ref) {
+  final authRepository = ref.watch(authRepositoryAppwriteProvider);
+  return AuthStateController(authRepository);
+});
+
+// Provider pour vérifier si l'utilisateur est connecté (basé sur authStateProvider)
+final isLoggedInProvider = Provider<bool>((ref) {
+  return ref.watch(authStateProvider).status == AuthStatus.authenticated;
+});
+
+// Provider pour l'utilisateur courant complet (basé sur authStateProvider)
+final currentUserProvider = Provider<UserModel?>((ref) {
+  return ref.watch(authStateProvider).user;
+});
+
+// Provider pour l'ID de l'utilisateur connecté (version simplifiée)
+final currentUserIdProvider = Provider<String?>((ref) {
+  final currentUser = ref.watch(currentUserProvider);
+  return currentUser?.appwriteId;
+});
+
+// Provider pour l'ID de l'utilisateur connecté (version FutureProvider)
+final currentUserIdFutureProvider = FutureProvider<String?>((ref) async {
+  final appwriteService = ref.watch(appwriteServiceProvider);
+  try {
+    final user = await appwriteService.getCurrentUser();
+    return user?.$id;
+  } catch (e) {
+    debugPrint('❌ Erreur currentUserIdFutureProvider: $e');
+    return null;
+  }
+});
+
+// Provider pour l'ID utilisateur via SharedPreferences (cache local)
+final cachedUserIdProvider = FutureProvider<String?>((ref) async {
+  final prefs = await ref.watch(sharedPreferencesProvider.future);
+  return prefs.getString('user_id');
+});
+
+// =================================================================
+// 3. PROVIDERS POUR LES NOTIFICATIONS ET INVITATIONS
+// =================================================================
+
+// Provider pour les invitations en attente du locataire connecté
+final pendingInvitationsProvider = FutureProvider.autoDispose<List<InvitationModel>>((ref) async {
+  final currentUser = ref.watch(currentUserProvider);
+  if (currentUser == null) {
+    debugPrint('🔍 pendingInvitationsProvider: Utilisateur non connecté');
+    return [];
+  }
+
+  final invitationService = ref.watch(invitationServiceProvider);
+  
+  try {
+    debugPrint('🔍 Recherche invitations pour: ${currentUser.email}');
+    final invitations = await invitationService.getPendingInvitationsByEmail(currentUser.email);
+    
+    debugPrint('📬 ${invitations.length} invitation(s) en attente trouvée(s)');
+    
+    // Filtrer les invitations expirées
+    final validInvitations = invitations.where((inv) => inv.canBeAccepted).toList();
+    
+    if (validInvitations.length != invitations.length) {
+      debugPrint('⚠️ ${invitations.length - validInvitations.length} invitation(s) expirée(s) filtrée(s)');
+    }
+    
+    return validInvitations;
+  } catch (e) {
+    debugPrint('❌ Erreur récupération invitations: $e');
+    return [];
+  }
+});
+
+// Provider pour le nombre d'invitations en attente
+final pendingInvitationsCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final invitations = await ref.watch(pendingInvitationsProvider.future);
+  return invitations.length;
+});
+
+// Provider pour le nombre de notifications non lues pour l'utilisateur courant
+final unreadNotificationsCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final userId = await ref.watch(currentUserIdFutureProvider.future);
+  if (userId == null) {
+    debugPrint('🔔 unreadNotificationsCountProvider: Pas d\'ID utilisateur');
+    return 0;
+  }
+  
+  try {
+    final notifService = ref.watch(notificationServiceProvider);
+    final count = await notifService.unreadCountForUser(userId);
+    debugPrint('📊 Notifications non lues pour $userId: $count');
+    return count;
+  } catch (e) {
+    debugPrint('❌ Erreur unreadNotificationsCountProvider: $e');
+    return 0;
+  }
+});
+
+// Provider pour le total notifications + invitations (pour l'appbar)
+final totalNotificationsCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final unreadNotifs = await ref.watch(unreadNotificationsCountProvider.future);
+  final pendingInvit = await ref.watch(pendingInvitationsCountProvider.future);
+  final total = unreadNotifs + pendingInvit;
+  
+  debugPrint('📊 Total notifications: $total (notifs: $unreadNotifs, invitations: $pendingInvit)');
+  return total;
+});
+
+// Provider pour l'abonnement realtime des invitations
+final invitationsRealtimeProvider = Provider.autoDispose((ref) {
+  debugPrint('🔌 Démarrage abonnement realtime invitations');
+  
+  final appwrite = ref.watch(appwriteServiceProvider);
+  final sub = appwrite.subscribeToCollection(Environment.invitationsCollectionId);
+
+  final listener = sub.stream.listen((event) async {
+    try {
+      debugPrint('🔄 Événement realtime invitations détecté');
+      // Invalider les providers d'invitations pour forcer le rafraîchissement
+      ref.invalidate(pendingInvitationsProvider);
+      ref.invalidate(pendingInvitationsCountProvider);
+      ref.invalidate(totalNotificationsCountProvider);
+    } catch (e) {
+      debugPrint('❌ Erreur dans listener invitations: $e');
+    }
+  });
+
+  ref.onDispose(() {
+    debugPrint('🔌 Arrêt abonnement realtime invitations');
+    listener.cancel();
+    try {
+      sub.close();
+    } catch (e) {
+      debugPrint('❌ Erreur fermeture subscription invitations: $e');
+    }
+  });
+
+  return sub;
+});
+
+// Provider pour l'abonnement realtime des notifications
+final notificationsRealtimeProvider = Provider.autoDispose((ref) {
+  debugPrint('🔌 Démarrage abonnement realtime notifications');
+  
+  final appwrite = ref.watch(appwriteServiceProvider);
+  final sub = appwrite.subscribeToCollection(Environment.notificationsCollectionId);
+
+  final listener = sub.stream.listen((event) async {
+    try {
+      debugPrint('🔄 Événement realtime notifications détecté');
+      // Invalider le provider de comptage
+      ref.invalidate(unreadNotificationsCountProvider);
+      ref.invalidate(totalNotificationsCountProvider);
+    } catch (e) {
+      debugPrint('❌ Erreur dans listener notifications: $e');
+    }
+  });
+
+  ref.onDispose(() {
+    debugPrint('🔌 Arrêt abonnement realtime notifications');
+    listener.cancel();
+    try {
+      sub.close();
+    } catch (e) {
+      debugPrint('❌ Erreur fermeture subscription notifications: $e');
+    }
+  });
+
+  return sub;
+});
+
+// =================================================================
+// 4. PROVIDERS DES REPOSITORIES (DATA)
 // =================================================================
 
 // Repository Auth avec Appwrite (type concret pour accès aux méthodes spécifiques)
@@ -135,7 +312,7 @@ final factureRepositoryProvider = Provider<FactureRepository>((ref) {
 });
 
 // =================================================================
-// 3. PROVIDERS DES CAS D'UTILISATION (DOMAIN)
+// 5. PROVIDERS DES CAS D'UTILISATION (DOMAIN)
 // =================================================================
 
 // Use Case de la Plainte (dépend de PlainteRepository)
@@ -153,7 +330,7 @@ final ownerRegisterUseCaseProvider = Provider((ref) {
 });
 
 // =================================================================
-// 4. PROVIDERS DE GESTION D'ÉTAT (BLOC/CUBIT/Notifier)
+// 6. PROVIDERS DE GESTION D'ÉTAT (BLOC/CUBIT/Notifier)
 // =================================================================
 
 final ownerLoginControllerProvider =
@@ -171,20 +348,8 @@ final ownerRegisterControllerProvider =
 });
 
 // =================================================================
-// 5. PROVIDERS POUR LES BIENS
+// 7. PROVIDERS POUR LE RÔLE
 // =================================================================
-
-// Provider pour l'ID de l'utilisateur connecté
-final currentUserIdProvider = FutureProvider<String?>((ref) async {
-  final appwriteService = ref.watch(appwriteServiceProvider);
-  final user = await appwriteService.getCurrentUser();
-  if (user == null) {
-    debugPrint('🔐 currentUserIdProvider: USER NULL');
-  } else {
-    debugPrint('🔐 currentUserIdProvider: User ID = ${user.$id}');
-  }
-  return user?.$id;
-});
 
 // Provider global pour le rôle sélectionné
 class SelectedRoleNotifier extends StateNotifier<String> {
@@ -195,16 +360,20 @@ class SelectedRoleNotifier extends StateNotifier<String> {
 
   Future<void> _init() async {
     try {
-      final current = await ref.read(authRepositoryAppwriteProvider).getCurrentUser();
+      final current = ref.read(currentUserProvider);
       if (current != null && current.typeRole.isNotEmpty) {
         state = current.typeRole;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('❌ Erreur initialisation rôle: $e');
+    }
   }
 
   void select(String newRole) {
     if (newRole == state) return;
 
+    debugPrint('🔄 Changement de rôle: $state → $newRole');
+    
     // Optimistic update: set state immediately so UI reacts fast
     state = newRole;
 
@@ -215,7 +384,7 @@ class SelectedRoleNotifier extends StateNotifier<String> {
   Future<void> _persistRole(String newRole) async {
     try {
       final appwriteService = ref.read(appwriteServiceProvider);
-      final current = await ref.read(authRepositoryAppwriteProvider).getCurrentUser();
+      final current = ref.read(currentUserProvider);
       if (current == null) return;
 
       await appwriteService.updateDocument(
@@ -223,8 +392,11 @@ class SelectedRoleNotifier extends StateNotifier<String> {
         documentId: current.appwriteId ?? '',
         data: {'role': newRole, 'updatedAt': DateTime.now().toIso8601String()},
       );
+      
+      debugPrint('✅ Rôle $newRole persisté pour ${current.email}');
     } catch (e) {
-      // Optionnel: log ou revenir en arrière si nécessaire
+      debugPrint('❌ Erreur persistance rôle: $e');
+      // On pourrait revenir à l'ancien état ici si nécessaire
     }
   }
 }
@@ -234,17 +406,17 @@ final selectedRoleProvider = StateNotifierProvider<SelectedRoleNotifier, String>
 });
 
 // =================================================================
-// 6. PROVIDER PRINCIPAL - CACHE DÉSACTIVÉ POUR DEBUG
+// 8. PROVIDER PRINCIPAL - BIENS DU PROPRIÉTAIRE
 // =================================================================
 
 final proprietaireBiensProvider =
     FutureProvider.autoDispose<List<BienModel>>((ref) async {
-  debugPrint('🎯🎯🎯 DEBUT proprietaireBiensProvider 🎯🎯🎯');
+  debugPrint('🎯 DEBUT proprietaireBiensProvider');
   
-  final userId = await ref.watch(currentUserIdProvider.future);
+  final userId = ref.watch(currentUserIdProvider);
   
   if (userId == null) {
-    debugPrint('❌❌❌ USER NULL - Retourne liste vide');
+    debugPrint('❌ USER NULL - Retourne liste vide');
     return <BienModel>[];
   }
 
@@ -258,65 +430,37 @@ final proprietaireBiensProvider =
     
     debugPrint('📊 NOMBRE TOTAL DE BIENS REÇUS: ${biens.length}');
     
-    // AFFICHER TOUS LES BIENS AVEC DÉTAILS
-    if (biens.isEmpty) {
-      debugPrint('📭 Liste vide - aucun bien trouvé');
-    } else {
-      for (var i = 0; i < biens.length; i++) {
-        final bien = biens[i];
-        final estAMoi = bien.proprietaireId == userId;
-        final emoji = estAMoi ? '✅' : '🚨';
-        debugPrint('   $emoji $i. ${bien.nom}');
-        debugPrint('      proprietaireId: ${bien.proprietaireId}');
-        debugPrint('      userId actuel: $userId');
-        debugPrint('      Appartient à moi? $estAMoi');
-      }
-    }
-    
     // FILTRAGE MANUEL ULTRA-STRICT
-    final mesBiens = biens.where((bien) {
-      final estAMoi = bien.proprietaireId == userId;
-      if (!estAMoi) {
-        debugPrint('💥💥💥 BIEN ÉTRANGER DÉTECTÉ ET FILTRÉ:');
-        debugPrint('      Nom: ${bien.nom}');
-        debugPrint('      proprietaireId: ${bien.proprietaireId}');
-        debugPrint('      userId: $userId');
-      }
-      return estAMoi;
-    }).toList();
+    final mesBiens = biens.where((bien) => bien.proprietaireId == userId).toList();
     
     final nbEtrangers = biens.length - mesBiens.length;
     if (nbEtrangers > 0) {
-      debugPrint('⚠️⚠️⚠️ ALERTE: $nbEtrangers BIEN(S) ÉTRANGER(S) FILTRÉ(S)!');
+      debugPrint('⚠️ ALERTE: $nbEtrangers BIEN(S) ÉTRANGER(S) FILTRÉ(S)!');
     }
     
     debugPrint('🎯 FIN Provider - Retourne ${mesBiens.length} biens');
-    debugPrint('🎯🎯🎯 FIN proprietaireBiensProvider 🎯🎯🎯\n');
-    
     return mesBiens;
     
   } catch (e) {
-    debugPrint('❌❌❌ ERREUR dans provider: $e');
-    debugPrint('❌❌❌ StackTrace: ${e.toString()}');
+    debugPrint('❌ ERREUR dans provider: $e');
     return <BienModel>[];
   }
 });
 
 // =================================================================
-// 7. PROVIDER SECOURS - UTILISE LES BIENS EXISTANTS
+// 9. PROVIDER SECOURS - UTILISE LES BIENS EXISTANTS
 // =================================================================
 
 final backupProprietaireBiensProvider = 
     FutureProvider.autoDispose<List<BienModel>>((ref) async {
-  debugPrint('🔄🔄🔄 DEBUT backupProprietaireBiensProvider');
+  debugPrint('🔄 DEBUT backupProprietaireBiensProvider');
   
-  final userId = await ref.watch(currentUserIdProvider.future);
+  final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return <BienModel>[];
   
   final bienRepository = ref.watch(bienRepositoryProvider);
   
   try {
-    // Utilise searchBiens() pour récupérer TOUS les biens
     debugPrint('🔍 Appel à searchBiens() (tous les biens)...');
     final tousLesBiens = await bienRepository.searchBiens();
     
@@ -333,4 +477,22 @@ final backupProprietaireBiensProvider =
     debugPrint('❌ Erreur backup: $e');
     return [];
   }
+});
+
+// Ajoutez ce provider supplémentaire pour garantir le type String
+final currentUserIdStringProvider = Provider<String?>((ref) {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId is String) {
+    return userId;
+  }
+  return null;
+});
+
+// OU version non-nullable (avec vérification)
+final currentUserIdNonNullProvider = Provider<String>((ref) {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId is String && userId.isNotEmpty) {
+    return userId;
+  }
+  throw Exception('Utilisateur non connecté');
 });

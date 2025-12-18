@@ -18,6 +18,7 @@ import 'payment_history_screen.dart';
 import 'profile_screen.dart';
 import '../../../core/di/providers.dart';
 import '../../../core/services/appwrite_service.dart';
+import '../../shared/pages/notifications_page.dart';
 import '../widgets/owner_scaffold.dart';
 
 class HomeOwnerScreen extends ConsumerStatefulWidget {
@@ -38,11 +39,9 @@ class _HomeOwnerScreenState extends ConsumerState<HomeOwnerScreen> {
   ];
 
   void _handleNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notifications - À implémenter'),
-        duration: Duration(milliseconds: 1500),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationsPage()),
     );
   }
 

@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../config/colors.dart';
 import '../../../core/di/providers.dart';
+import '../../shared/pages/notifications_screen.dart';
 
-/// AppBar partagée qui s'adapte au rôle de l'utilisateur
-/// Peut être utilisée à la fois par propriétaire et locataire
 class SharedAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String currentRole; // 'owner' ou 'tenant'
   final VoidCallback? onNotificationsPressed;
@@ -23,9 +22,23 @@ class SharedAppBar extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(80);
 
+  Future<void> _openNotificationsPage(BuildContext context, WidgetRef ref) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+    );
+    
+    // ✅ CORRECTION : Invalider les providers pour rafraîchir les compteurs
+    ref.invalidate(pendingInvitationsProvider);
+    ref.invalidate(totalNotificationsCountProvider);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unreadAsync = ref.watch(unreadNotificationsCountProvider);
+    // ✅ CORRECTION : Démarrer l'écoute realtime au bon moment
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(invitationsRealtimeProvider);
+    });
 
     return AppBar(
       backgroundColor: AppColors.accentRed,
@@ -48,48 +61,64 @@ class SharedAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ),
       centerTitle: false,
       actions: [
-        Stack(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined, size: 28),
-              onPressed: onNotificationsPressed ?? () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Notifications - À implémenter'),
-                    duration: Duration(milliseconds: 1500),
+        // Bouton Notifications avec badge
+        Consumer(
+          builder: (context, ref, child) {
+            // ✅ CORRECTION : Utiliser un FutureProvider plus fiable
+            final totalNotifsAsync = ref.watch(totalNotificationsCountProvider);
+            
+            return Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_outlined, size: 28),
+                  onPressed: () => _openNotificationsPage(context, ref),
+                  padding: const EdgeInsets.all(8),
+                ),
+                Positioned(
+                  right: 6,
+                  top: 10,
+                  child: totalNotifsAsync.when(
+                    data: (count) => count > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              count > 99 ? '99+' : count.toString(),
+                              style: const TextStyle(
+                                color: AppColors.accentRed,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                    loading: () => const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    error: (_, __) => const SizedBox.shrink(),
                   ),
-                );
-              },
-              padding: const EdgeInsets.all(8),
-            ),
-            Positioned(
-              right: 6,
-              top: 10,
-              child: unreadAsync.when(
-                data: (count) => count > 0
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          count.toString(),
-                          style: const TextStyle(
-                            color: AppColors.accentRed,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(width: 4),
+        
+        // Menu profil
         PopupMenuButton<String>(
           icon: const Icon(Icons.account_circle_outlined, size: 32),
           tooltip: 'Menu du profil',

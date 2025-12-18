@@ -1,20 +1,14 @@
 // ===============================
-// 🏠 Écran : Accueil Locataire
-//
-// Ce fichier définit l'interface utilisateur principale pour le locataire.
-//
-// Dossier : lib/presentation/locataires/pages/
-// Rôle : Tableau de bord du locataire
-// Utilisé par : Locataires
+// 🏠 Écran : Accueil Locataire - VERSION CORRIGÉE
 // ===============================
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:appwrite/appwrite.dart'; // <-- IMPORT AJOUTÉ
+import 'package:appwrite/appwrite.dart';
 import '../../../config/colors.dart';
-import '../../../config/theme.dart';
 import '../widgets/tenant_scaffold.dart';
 import '../../../core/di/providers.dart';
+import '../../shared/pages/notifications_screen.dart'; // CHANGÉ : notifications_screen.dart
 import '../../../core/services/appwrite_service.dart';
 import '../../shared/pages/no_connection_page.dart';
 import '../../shared/widgets/shared_profile_form.dart';
@@ -22,8 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../config/environment.dart';
 import '../../../data/models/bien_model.dart';
 import '../../../data/models/invitation_model.dart';
-// Ajoutez cet import
-import '../widgets/invitations_list_widget.dart';
+import '../widgets/invitations_pending_widget.dart'; // Un seul widget
 import '../../proprietaires/pages/profile_screen.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
@@ -60,8 +53,15 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   // Logement du locataire
   BienModel? _currentBien;
   bool _isLoadingBien = true;
-  List<InvitationModel> _pendingInvitations = [];
-  bool _isLoadingInvitations = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  // ✅ SUPPRIMÉ : Les méthodes _loadPendingInvitationsForEmail et _acceptPendingInvitation
+  // Car gérées maintenant par le widget InvitationsPendingWidget et le provider
 
   Future<void> _loadTenantBien(String userId) async {
     try {
@@ -96,48 +96,6 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
     }
   }
 
-  Future<void> _loadPendingInvitationsForEmail(String email) async {
-    try {
-      setState(() => _isLoadingInvitations = true);
-      final invitationService = ref.read(invitationServiceProvider);
-      final invitations = await invitationService.getPendingInvitationsByEmail(email);
-      if (mounted) setState(() => _pendingInvitations = invitations);
-    } catch (e) {
-      debugPrint('Erreur chargement invitations: $e');
-    } finally {
-      if (mounted) setState(() => _isLoadingInvitations = false);
-    }
-  }
-
-  Future<void> _acceptPendingInvitation(InvitationModel invitation) async {
-    try {
-      final appwriteService = ref.read(appwriteServiceProvider);
-      final currentUser = await appwriteService.getCurrentUser();
-      if (currentUser == null) throw Exception('Utilisateur non connecté');
-
-      final invitationService = ref.read(invitationServiceProvider);
-      await invitationService.acceptInvitationAsExistingUser(token: invitation.token, userId: currentUser.$id);
-
-      // Refresh data: reload contract/bien and invitations
-      await _loadTenantBien(currentUser.$id);
-      if (_email.isNotEmpty) await _loadPendingInvitationsForEmail(_email);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invitation acceptée — logement associé.'), backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red));
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
   Future<void> _loadUserData() async {
     try {
       final appwriteService = ref.read(appwriteServiceProvider);
@@ -169,10 +127,8 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                 _adresseController.text = doc.data['adresse'] ?? '';
                 _email = doc.data['email'] ?? user.email;
                 _photoUrl = doc.data['photoUrl'];
-                // Charger les invitations pendantes pour cet email (si présent)
-                if ((_email ?? '').isNotEmpty) {
-                  _loadPendingInvitationsForEmail(_email);
-                }
+                // ✅ SUPPRIMÉ : Le chargement manuel des invitations
+                // C'est maintenant géré par le provider Riverpod
               });
             }
           } catch (e) {
@@ -193,10 +149,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                   _adresseController.text = doc.data['adresse'] ?? '';
                   _email = doc.data['email'] ?? user.email;
                   _photoUrl = doc.data['photoUrl'];
-                  // Charger les invitations pendantes pour cet email (si présent)
-                  if ((_email ?? '').isNotEmpty) {
-                    _loadPendingInvitationsForEmail(_email);
-                  }
+                  // ✅ SUPPRIMÉ : Le chargement manuel des invitations
                 });
               }
             }
@@ -378,12 +331,11 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
     }
   }
 
+  // ✅ CORRIGÉ : Utilise notifications_screen.dart au lieu de notifications_page.dart
   void _handleNotifications() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Notifications - À implémenter'),
-        duration: Duration(milliseconds: 1500),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationsScreen()),
     );
   }
 
@@ -413,7 +365,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
       currentIndex: _currentIndex,
       onIndexChanged: (index) => setState(() => _currentIndex = index),
       body: _buildBody(),
-      onNotificationsPressed: _handleNotifications,
+      onNotificationsPressed: _handleNotifications, // ✅ Utilise la méthode corrigée
       onProfilePressed: () {
         Navigator.push(
           context,
@@ -525,7 +477,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: _isLoadingBien
-                  ? const Center(child: Text('Chargement...'))
+                  ? const Center(child: CircularProgressIndicator())
                   : _currentBien != null
                       ? Row(
                           children: [
@@ -570,7 +522,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Loyer: ${_currentBien!.loyerMensuel.toStringAsFixed(0)} €',
+                                    'Loyer: ${_currentBien!.loyerMensuel.toStringAsFixed(0)} FCFA',
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
                                 ],
@@ -579,31 +531,18 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                           ],
                         )
                       : const Center(
-                          child: Text('Aucun logement associé'),
+                          child: Text(
+                            'Aucun logement associé',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Invitations en attente (si présentes)
-          if (_isLoadingInvitations)
-            const Center(child: Text('Chargement des invitations...'))
-          else if (_pendingInvitations.isNotEmpty)
-            InvitationsListWidget(
-              invitations: _pendingInvitations,
-              onAccept: (inv) async => _acceptPendingInvitation(inv),
-              onReject: (inv) async {
-                try {
-                  final invitationService = ref.read(invitationServiceProvider);
-                  await invitationService.rejectInvitation(inv.token);
-                  // reload pending list
-                  if (_email.isNotEmpty) await _loadPendingInvitationsForEmail(_email);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitation refusée.'), backgroundColor: Colors.orange));
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${e.toString()}'), backgroundColor: Colors.red));
-                }
-              },
-            ),
+          // ✅ UNIQUEMENT le nouveau widget - pas de doublons !
+          const InvitationsPendingWidget(),
+
           const SizedBox(height: 24),
 
           // Actions rapides
@@ -639,10 +578,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
                   icon: Icons.receipt_long,
                   label: 'Mes\nquittances',
                   color: Colors.blue,
-                  onTap: () {
-                    // TODO: Voir les quittances
-                    _handleNotifications();
-                  },
+                  onTap: _handleNotifications, // ✅ Utilise la méthode corrigée
                 ),
               ),
             ],
@@ -736,7 +672,7 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
       telephoneController: _telephoneController,
       adresseController: _adresseController,
       email: _email,
-      photoUrl: _photoUrl, // ENLEVÉ: role: _role,
+      photoUrl: _photoUrl,
       isEditable: true,
       isLoading: _isLoading,
       isSaving: _isSaving,

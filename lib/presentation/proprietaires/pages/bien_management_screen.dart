@@ -137,7 +137,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
         final bienRepository = ref.read(bienRepositoryProvider);
         await bienRepository.deleteBien(bien.appwriteId!);
         // Clear local cache for this user so list is refreshed immediately
-        final userId = await ref.read(currentUserIdProvider.future);
+        final userId = ref.read(currentUserIdProvider);
         if (userId != null) {
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove('proprietaire_biens_$userId');
@@ -474,7 +474,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     try {
       setState(() => _isLoading = true);
 
-      final userId = await ref.read(currentUserIdProvider.future);
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) throw Exception('Utilisateur non connecté');
 
       String? uploadedUrl;
@@ -487,7 +487,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
           uploadedUrl = await imageService.uploadImage(
             filePath: imagePath,
             folder: 'biens',
-            userId: userId,
+            userId: userId as String?,
           );
           debugPrint('Image téléversée (update): $uploadedUrl');
         }
@@ -495,7 +495,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
 
       final updatedBien = BienModel(
         appwriteId: bienId,
-        proprietaireId: userId,
+        proprietaireId: userId as String,
         nom: nom,
         adresse: adresse,
         type: type,
@@ -795,7 +795,7 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     try {
       setState(() => _isLoading = true);
 
-      final userId = await ref.read(currentUserIdProvider.future);
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         throw Exception('Utilisateur non connecté');
       }
@@ -811,14 +811,14 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
           uploadedUrl = await imageService.uploadImage(
             filePath: imagePath,
             folder: 'biens',
-            userId: userId,
+            userId: userId as String?,
           );
           debugPrint('Image téléversée: $uploadedUrl');
         }
       }
 
       final bien = BienModel(
-        proprietaireId: userId,
+        proprietaireId: userId as String,
         nom: nom,
         adresse: adresse,
         type: type,
@@ -1321,38 +1321,41 @@ class _BienManagementScreenState extends ConsumerState<BienManagementScreen> {
     final currentUserIdAsync = ref.watch(currentUserIdProvider);
 
     return Scaffold(
-      body: Stack(
-        children: [
-          biensAsync.when(
-            data: (biens) {
-              // Filtrer côté UI pour s'assurer qu'on n'affiche que les biens du propriétaire courant
-              final currentUserId = currentUserIdAsync.asData?.value;
-              final filteredBiens = currentUserId == null
-                  ? <BienModel>[]
-                  : biens
-                        .where((b) => b.proprietaireId == currentUserId)
-                        .toList();
+  body: Stack(
+    children: [
+      biensAsync.when(
+        data: (biens) {
+          // ✅ CORRECTION : Utiliser la version asynchrone avec .value
+          final currentUserIdAsync = ref.watch(currentUserIdFutureProvider);
+          final currentUserId = currentUserIdAsync.value; // Accès direct à .value
+          
+          // Filtrer côté UI pour s'assurer qu'on n'affiche que les biens du propriétaire courant
+          final filteredBiens = currentUserId == null
+              ? <BienModel>[]
+              : biens
+                    .where((b) => b.proprietaireId == currentUserId)
+                    .toList();
 
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _prefetchThumbnails(filteredBiens);
-              });
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _prefetchThumbnails(filteredBiens);
+          });
 
-              if (filteredBiens.isEmpty) {
-                return _buildEmptyState();
-              }
+          if (filteredBiens.isEmpty) {
+            return _buildEmptyState();
+          }
 
-              return _buildBienList(filteredBiens);
-            },
-            loading: () => _buildLoadingState(),
-            error: (error, _) => _buildErrorState(error.toString()),
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
+          return _buildBienList(filteredBiens);
+        },
+        loading: () => _buildLoadingState(),
+        error: (error, _) => _buildErrorState(error.toString()),
       ),
-    );
+      if (_isLoading)
+        Container(
+          color: Colors.black.withOpacity(0.3),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+    ],
+  ),
+);
   }
 }
