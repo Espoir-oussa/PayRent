@@ -1,0 +1,29 @@
+name: Deploy create-contract function
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-function:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up jq
+        run: sudo apt-get update && sudo apt-get install -y jq zip
+
+      - name: Run deploy script
+        env:
+          APPWRITE_ENDPOINT: ${{ secrets.APPWRITE_ENDPOINT }}
+          APPWRITE_PROJECT: ${{ secrets.APPWRITE_PROJECT }}
+          APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
+        run: |
+          chmod +x functions/deploy/deploy_function.sh
+          ./functions/deploy/deploy_function.sh
+
+      - name: Print reminder
+        run: echo "Remember to update lib/config/environment.dart with the function ID if it wasn't previously set."
