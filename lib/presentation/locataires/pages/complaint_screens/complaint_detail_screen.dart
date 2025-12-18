@@ -1,48 +1,36 @@
 import 'package:flutter/material.dart';
 import '../../../../config/colors.dart';
+import '../../../../data/models/plainte_model.dart';
 
-class ComplaintDetailScreen extends StatefulWidget {
-  final int complaintId;
+class ComplaintDetailScreen extends StatelessWidget {
+  final PlainteModel complaint;
 
   const ComplaintDetailScreen({
     Key? key,
-    required this.complaintId,
+    required this.complaint,
   }) : super(key: key);
 
   @override
-  State<ComplaintDetailScreen> createState() => _ComplaintDetailScreenState();
-}
-
-class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Load complaint detail
-    Future.microtask(() {
-      // TODO: Load from provider
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(complaint.statutPlainte);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
-        title: const Text('Detail Plainte'),
+        title: const Text('Détail Plainte'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Mock Complaint Detail
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
-                    'Chauffage defaillant',
+                    complaint.sujet,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -52,13 +40,13 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'Ouverte',
+                  child: Text(
+                    complaint.statutPlainte,
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: statusColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -67,8 +55,10 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Date: 15/11/2024',
-              style: Theme.of(context).textTheme.bodySmall,
+              'Date: ${_formatDate(complaint.dateCreation)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -79,13 +69,15 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
             ),
             const SizedBox(height: 8),
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'Le chauffage ne fonctionne plus depuis 3 jours. Il fait tres froid dans l\'appartement.',
+              child: Text(
+                complaint.description,
+                style: const TextStyle(fontSize: 15),
               ),
             ),
             const SizedBox(height: 24),
@@ -96,9 +88,11 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
                   ),
             ),
             const SizedBox(height: 8),
-            _buildInfoTile('ID', '1'),
-            _buildInfoTile('Bien', 'ID 1'),
-            _buildInfoTile('Statut', 'Ouverte'),
+            _buildInfoTile('ID', complaint.idPlainte.toString()),
+            _buildInfoTile('Bien', 'ID ${complaint.idBien}'),
+            _buildInfoTile('Locataire', 'ID ${complaint.idLocataire}'),
+            _buildInfoTile(
+                'Propriétaire', 'ID ${complaint.idProprietaireGestionnaire}'),
           ],
         ),
       ),
@@ -117,9 +111,37 @@ class _ComplaintDetailScreenState extends State<ComplaintDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(value),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'ouverte':
+        return Colors.orange;
+      case 'en cours':
+      case 'en_cours':
+        return Colors.blue;
+      case 'resolue':
+      case 'résolue':
+        return Colors.green;
+      case 'fermee':
+      case 'fermée':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

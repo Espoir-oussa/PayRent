@@ -33,6 +33,8 @@ import '../../domain/repositories/contrat_repository.dart';
 import '../../domain/repositories/paiement_repository.dart';
 import '../../domain/repositories/facture_repository.dart';
 import '../../domain/usecases/plaintes/update_complaint_status_usecase.dart';
+import '../../domain/usecases/plaintes/create_complaint_usecase.dart';
+import '../../domain/usecases/plaintes/get_tenant_complaints_usecase.dart';
 import '../../domain/usecases/auth/owner_login_usecase.dart';
 import '../../domain/usecases/auth/owner_register_usecase.dart';
 import '../../domain/usecases/contrat/get_tenant_locations_usecase.dart';
@@ -186,6 +188,16 @@ final getTenantPaymentsUseCaseProvider = Provider((ref) {
 // Use Case - Get Tenant Invoices
 final getTenantInvoicesUseCaseProvider = Provider((ref) {
   return GetTenantInvoicesUseCase(ref.watch(factureRepositoryProvider));
+});
+
+// Use Case - Create Complaint
+final createComplaintUseCaseProvider = Provider((ref) {
+  return CreateComplaintUseCase(ref.watch(plainteRepositoryProvider));
+});
+
+// Use Case - Get Tenant Complaints
+final getTenantComplaintsUseCaseProvider = Provider((ref) {
+  return GetTenantComplaintsUseCase(ref.watch(plainteRepositoryProvider));
 });
 
 // =================================================================

@@ -14,9 +14,11 @@ import '../../../config/colors.dart';
 import '../../../core/di/providers.dart';
 import '../../../data/models/contrat_location_model.dart';
 import '../../../data/models/paiement_model.dart';
+import '../../../data/models/plainte_model.dart';
 import './locations/tenant_locations_controller.dart';
 import './payments/tenant_payments_controller.dart';
 import 'complaint_screens/complaint_detail_screen.dart';
+import 'complaint_creation_screen.dart';
 
 class HomeTenantScreen extends ConsumerStatefulWidget {
   const HomeTenantScreen({super.key});
@@ -686,132 +688,298 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
   }
 
   Widget _buildComplaintsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Mes plaintes',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return Consumer(
+      builder: (context, ref, child) {
+        return FutureBuilder<List<PlainteModel>>(
+          future: _loadComplaints(ref),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    Text('Erreur: ${snapshot.error}'),
+                  ],
                 ),
-          ),
-          const SizedBox(height: 16),
-          _buildComplaintCard(
-            id: 1,
-            title: 'Chauffage defaillant',
-            status: 'Ouverte',
-            date: '15/11/2024',
-          ),
-          const SizedBox(height: 12),
-          _buildComplaintCard(
-            id: 2,
-            title: 'Fuite d\'eau resolue',
-            status: 'Resolue',
-            date: '10/11/2024',
-          ),
-          const SizedBox(height: 12),
-          _buildComplaintCard(
-            id: 3,
-            title: 'Lumiere cassee',
-            status: 'Fermee',
-            date: '28/10/2024',
-          ),
-        ],
-      ),
-    );
-  }
+              );
+            }
 
-  Widget _buildComplaintCard({
-    required int id,
-    required String title,
-    required String status,
-    required String date,
-  }) {
-    final statusColor = _getStatusColor(status);
+            final complaints = snapshot.data ?? [];
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => ComplaintDetailScreen(
-              complaintId: id,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.report_problem, color: statusColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        date,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        'Mes plaintes',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      ElevatedButton.icon(
+                        onPressed: () => _navigateToCreateComplaint(ref),
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Nouvelle'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryDark,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  
+                  if (complaints.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            Icon(Icons.report_problem_outlined,
+                                size: 64, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Aucune plainte déposée',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Vous pouvez déposer une plainte en cliquant sur le bouton ci-dessus',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...complaints.map((complaint) =>
+                        _buildComplaintCard(complaint: complaint)),
                 ],
               ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<List<PlainteModel>> _loadComplaints(WidgetRef ref) async {
+    try {
+      final appwriteService = ref.read(appwriteServiceProvider);
+      final user = await appwriteService.getCurrentUser();
+      if (user != null) {
+        final getTenantComplaintsUseCase =
+            ref.read(getTenantComplaintsUseCaseProvider);
+        return await getTenantComplaintsUseCase(user.$id);
+      }
+      return [];
+    } catch (e) {
+      print('Erreur lors du chargement des plaintes: $e');
+      return [];
+    }
+  }
+
+  Future<void> _navigateToCreateComplaint(WidgetRef ref) async {
+    try {
+      final appwriteService = ref.read(appwriteServiceProvider);
+      final user = await appwriteService.getCurrentUser();
+      if (user == null) return;
+
+      // Récupérer le premier contrat/bien du locataire
+      final locationsState = ref.read(tenantLocationsControllerProvider);
+      if (locationsState.locations.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vous devez avoir une location active pour déposer une plainte'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final firstLocation = locationsState.locations.first;
+      
+      // Récupérer le propriétaire du bien
+      final bienRepository = ref.read(bienRepositoryProvider);
+      final bien = await bienRepository.getBienById(firstLocation.idBien);
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ComplaintCreationScreen(
+            locataireId: user.$id,
+            bienId: firstLocation.idBien,
+            proprietaireId: bien.proprietaireId,
+          ),
+        ),
+      );
+
+      if (result == true && mounted) {
+        // Recharger les plaintes
+        setState(() {});
+      }
+    } catch (e) {
+      print('Erreur: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildComplaintCard({required PlainteModel complaint}) {
+    final statusColor = _getComplaintStatusColor(complaint.statutPlainte);
+    final statusIcon = _getComplaintStatusIcon(complaint.statutPlainte);
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ComplaintDetailScreen(
+                complaint: complaint,
+              ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey[400],
-            ),
-          ],
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(statusIcon, color: statusColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          complaint.sujet,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          complaint.description,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      complaint.statutPlainte,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _formatDate(complaint.dateCreation),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Color _getComplaintStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'ouverte':
+        return Colors.orange;
+      case 'en cours':
+      case 'en_cours':
+        return Colors.blue;
+      case 'resolue':
+      case 'résolue':
+        return Colors.green;
+      case 'fermee':
+      case 'fermée':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getComplaintStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'ouverte':
+        return Icons.error_outline;
+      case 'en cours':
+      case 'en_cours':
+        return Icons.hourglass_empty;
+      case 'resolue':
+      case 'résolue':
+        return Icons.check_circle_outline;
+      case 'fermee':
+      case 'fermée':
+        return Icons.cancel_outlined;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
   Widget _buildProfileTab() {
@@ -830,6 +998,12 @@ class _HomeTenantScreenState extends ConsumerState<HomeTenantScreen> {
             'Gérez vos informations personnelles',
             style: TextStyle(color: Colors.grey),
           ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
         ],
       ),
     );
