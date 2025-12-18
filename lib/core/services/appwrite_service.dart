@@ -4,6 +4,8 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:appwrite/models.dart' as models;
 import '../../config/environment.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 /// Service singleton pour gérer les connexions Appwrite
 class AppwriteService {
@@ -33,6 +35,8 @@ class AppwriteService {
     _databases = Databases(_client);
     _storage = Storage(_client);
     _realtime = Realtime(_client);
+    // Functions service (pour exécuter les Cloud Functions Appwrite)
+    _functions = Functions(_client);
 
     _isInitialized = true;
   }
@@ -64,6 +68,40 @@ class AppwriteService {
   Realtime get realtime {
     _checkInitialized();
     return _realtime;
+  }
+
+  /// Functions service (Appwrite serverless functions)
+  late final Functions _functions;
+  Functions get functions {
+    _checkInitialized();
+    return _functions;
+  }
+
+  /// Execute a Cloud Function via REST (compatible with Appwrite runtime execution)
+  /// 'payload' will be JSON-encoded and sent as the 'data' field required by Appwrite
+  Future<Map<String, dynamic>> executeFunction({
+    required String functionId,
+    Map<String, dynamic>? payload,
+  }) async {
+    final uri = Uri.parse('${Environment.appwritePublicEndpoint}/functions/$functionId/executions');
+    final body = jsonEncode({
+      'data': payload == null ? null : jsonEncode(payload),
+    });
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'content-type': 'application/json',
+        'x-appwrite-project': Environment.appwriteProjectId,
+      },
+      body: body,
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Function execution failed: ${response.statusCode} ${response.body}');
   }
 
   void _checkInitialized() {

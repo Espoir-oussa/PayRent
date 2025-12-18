@@ -16,11 +16,22 @@ jobs:
       - name: Set up jq
         run: sudo apt-get update && sudo apt-get install -y jq zip
 
+      - name: Check FUNCTION_ID presence
+        env:
+          FUNCTION_ID: ${{ secrets.FUNCTION_ID }}
+        run: |
+          if [ -z "$FUNCTION_ID" ]; then
+            echo "⚠️ FUNCTION_ID is not set in secrets"
+          else
+            echo "✅ FUNCTION_ID is set"
+          fi
+
       - name: Run deploy script
         env:
           APPWRITE_ENDPOINT: ${{ secrets.APPWRITE_ENDPOINT }}
           APPWRITE_PROJECT: ${{ secrets.APPWRITE_PROJECT }}
           APPWRITE_API_KEY: ${{ secrets.APPWRITE_API_KEY }}
+          FUNCTION_ID: ${{ secrets.FUNCTION_ID }}
         run: |
           chmod +x functions/deploy/deploy_function.sh
           ./functions/deploy/deploy_function.sh

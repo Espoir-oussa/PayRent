@@ -10,7 +10,7 @@ import '../../data/models/invitation_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/bien_model.dart';
 import 'appwrite_service.dart';
-import 'email_service.dart';
+
 
 /// Résultat d'une création d'invitation, contenant l'invitation et si l'email a bien été envoyé
 class InvitationResult {
@@ -312,6 +312,14 @@ class InvitationService {
 
   /// Accepter une invitation en tant qu'utilisateur existant (locataire connecté)
   // Dans invitation_service.dart, vérifiez la méthode :
+
+  void _ensureCreateContractFunctionConfigured() {
+    // Vérifier que l'ID de la function a bien été remplacé dans Environment
+    if (Environment.createContractFunctionId.trim().isEmpty || Environment.createContractFunctionId == 'create-contract') {
+      throw Exception("Cloud Function 'create-contract' non déployée ou 'Environment.createContractFunctionId' non configuré. Déployez la function dans Appwrite et mettez à jour 'Environment.createContractFunctionId' avec l'ID retourné.");
+    }
+  }
+
   Future<void> acceptInvitationAsExistingUser({
   required String token,
   required String userId,
@@ -343,31 +351,28 @@ class InvitationService {
       throw Exception('Vous êtes déjà locataire de ce bien');
     }
 
-    // 2. Créer le contrat de location
-    await _appwriteService.createDocument(
-      collectionId: Environment.contratsCollectionId,
-      data: {
-        'bienId': invitation.bienId,
+    // 2. Déléguer la création du contrat à la Cloud Function (server-side)
+    debugPrint('🔧 Delegating contract creation to server function for bien ${invitation.bienId}');
+    try {
+      final payload = {
+        'token': token,
         'locataireId': userId,
-        'proprietaireId': invitation.proprietaireId,
-        'dateDebut': DateTime.now().toIso8601String(),
-        'dateFin': null,
-        'loyerMensuel': invitation.loyerMensuel,
-        'charges': invitation.charges ?? 0,
-        'caution': 0,
-        'jourPaiement': 1,
-        'statut': 'actif',
-        'documentUrl': null,
-        'notes': invitation.message,
-        'createdAt': DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
-      permissions: [
-        Permission.read(Role.user(userId)),
-        Permission.read(Role.user(invitation.proprietaireId)),
-        Permission.update(Role.user(invitation.proprietaireId)),
-      ],
-    );
+      };
+      _ensureCreateContractFunctionConfigured();
+      debugPrint('🔐 Requesting function ${Environment.createContractFunctionId} with payload: $payload');
+      final execResp = await _appwriteService.executeFunction(
+        functionId: Environment.createContractFunctionId,
+        payload: payload,
+      );
+      debugPrint('🔁 Function execution (acceptExistingUser) resp: $execResp');
+      if (execResp['success'] != true) {
+        final err = execResp['error'] ?? execResp['message'] ?? 'Unknown function error';
+        throw Exception('Erreur serveur lors de la création du contrat: $err');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur fonction create-contract: $e');
+      rethrow;
+    }
 
     // 3. Mettre à jour le statut de l'invitation
     await _appwriteService.updateDocument(
@@ -416,6 +421,7 @@ class InvitationService {
     debugPrint('✅ Invitation acceptée avec succès pour l\'utilisateur $userId');
   } on AppwriteException catch (e) {
     debugPrint('❌ Erreur Appwrite acceptInvitationAsExistingUser: ${e.message}');
+    debugPrint('❌ AppwriteException code: ${e.code} | response: ${e.response}');
     if (e.message?.contains('already exists') == true) {
       throw Exception('Vous êtes déjà locataire de ce bien');
     }
@@ -502,31 +508,28 @@ class InvitationService {
         }
       }
 
-      // 5. Créer le contrat de location
-      await _appwriteService.createDocument(
-        collectionId: Environment.contratsCollectionId,
-        data: {
-          'bienId': invitation.bienId,
+      // 5. Déléguer la création du contrat à la Cloud Function (server-side)
+      debugPrint('🔧 Delegating contract creation to server function for bien ${invitation.bienId}');
+      try {
+        final payload = {
+          'token': token,
           'locataireId': user.$id,
-          'proprietaireId': invitation.proprietaireId,
-          'dateDebut': DateTime.now().toIso8601String(),
-          'dateFin': null,
-          'loyerMensuel': invitation.loyerMensuel,
-          'charges': invitation.charges ?? 0,
-          'caution': 0,
-          'jourPaiement': 1,
-          'statut': 'actif',
-          'documentUrl': null,
-          'notes': invitation.message,
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-        permissions: [
-          Permission.read(Role.user(user.$id)),
-          Permission.read(Role.user(invitation.proprietaireId)),
-          Permission.update(Role.user(invitation.proprietaireId)),
-        ],
-      );
+        };
+        _ensureCreateContractFunctionConfigured();
+        debugPrint('🔐 Requesting function ${Environment.createContractFunctionId} with payload: $payload');
+        final execResp = await _appwriteService.executeFunction(
+          functionId: Environment.createContractFunctionId,
+          payload: payload,
+        );
+        debugPrint('🔁 Function execution (acceptNewUser) resp: $execResp');
+        if (execResp['success'] != true) {
+          final err = execResp['error'] ?? execResp['message'] ?? 'Unknown function error';
+          throw Exception('Erreur serveur lors de la création du contrat: $err');
+        }
+      } catch (e) {
+        debugPrint('❌ Erreur fonction create-contract: $e');
+        rethrow;
+      }
 
       // 6. Mettre à jour le statut de l'invitation
       await _appwriteService.updateDocument(
@@ -623,30 +626,27 @@ class InvitationService {
         }
 
         // Créer le contrat
-        await _appwriteService.createDocument(
-          collectionId: Environment.contratsCollectionId,
-          data: {
-            'bienId': invitation.bienId,
+        // Déléguer la création du contrat à la Cloud Function (server-side)
+        debugPrint('🔧 Delegating contract creation to server function for bien ${invitation.bienId}');
+        try {
+          final payload = {
+            'token': token,
             'locataireId': user.$id,
-            'proprietaireId': invitation.proprietaireId,
-            'dateDebut': DateTime.now().toIso8601String(),
-            'dateFin': null,
-            'loyerMensuel': invitation.loyerMensuel,
-            'charges': invitation.charges ?? 0,
-            'caution': 0,
-            'jourPaiement': 1,
-            'statut': 'actif',
-            'documentUrl': null,
-            'notes': invitation.message,
-            'createdAt': DateTime.now().toIso8601String(),
-            'updatedAt': DateTime.now().toIso8601String(),
-          },
-          permissions: [
-            Permission.read(Role.user(user.$id)),
-            Permission.read(Role.user(invitation.proprietaireId)),
-            Permission.update(Role.user(invitation.proprietaireId)),
-          ],
-        );
+          };
+          debugPrint('🔐 Requesting function ${Environment.createContractFunctionId} with payload: $payload');
+          final execResp = await _appwriteService.executeFunction(
+            functionId: Environment.createContractFunctionId,
+            payload: payload,
+          );
+          debugPrint('🔁 Function execution (acceptWithPassword - new) resp: $execResp');
+          if (execResp['success'] != true) {
+            final err = execResp['error'] ?? execResp['message'] ?? 'Unknown function error';
+            throw Exception('Erreur serveur lors de la création du contrat: $err');
+          }
+        } catch (e) {
+          debugPrint('❌ Erreur fonction create-contract: $e');
+          rethrow;
+        }
 
         // Mettre à jour l'invitation et le bien
         await _appwriteService.updateDocument(
@@ -687,30 +687,28 @@ class InvitationService {
               );
 
             // Créer le contrat si nécessaire
-            await _appwriteService.createDocument(
-              collectionId: Environment.contratsCollectionId,
-              data: {
-                'bienId': invitation.bienId,
+            // Déléguer la création du contrat à la Cloud Function (server-side)
+            debugPrint('🔧 Delegating contract creation to server function for bien ${invitation.bienId}');
+            try {
+              final payload = {
+                'token': token,
                 'locataireId': currentUser.$id,
-                'proprietaireId': invitation.proprietaireId,
-                'dateDebut': DateTime.now().toIso8601String(),
-                'dateFin': null,
-                'loyerMensuel': invitation.loyerMensuel,
-                'charges': invitation.charges ?? 0,
-                'caution': 0,
-                'jourPaiement': 1,
-                'statut': 'actif',
-                'documentUrl': null,
-                'notes': invitation.message,
-                'createdAt': DateTime.now().toIso8601String(),
-                'updatedAt': DateTime.now().toIso8601String(),
-              },
-              permissions: [
-                Permission.read(Role.user(currentUser.$id)),
-                Permission.read(Role.user(invitation.proprietaireId)),
-                Permission.update(Role.user(invitation.proprietaireId)),
-              ],
-            );
+              };
+              _ensureCreateContractFunctionConfigured();
+              debugPrint('🔐 Requesting function ${Environment.createContractFunctionId} with payload: $payload');
+              final execResp = await _appwriteService.executeFunction(
+                functionId: Environment.createContractFunctionId,
+                payload: payload,
+              );
+              debugPrint('🔁 Function execution (acceptWithPassword - existing) resp: $execResp');
+              if (execResp['success'] != true) {
+                final err = execResp['error'] ?? execResp['message'] ?? 'Unknown function error';
+                throw Exception('Erreur serveur lors de la création du contrat: $err');
+              }
+            } catch (e) {
+              debugPrint('❌ Erreur fonction create-contract: $e');
+              rethrow;
+            }
 
             await _appwriteService.updateDocument(
               collectionId: Environment.invitationsCollectionId,
@@ -781,31 +779,27 @@ class InvitationService {
         throw Exception('Cette invitation n\'est plus valide');
       }
 
-      // Créer le contrat
-      await _appwriteService.createDocument(
-        collectionId: Environment.contratsCollectionId,
-        data: {
-          'bienId': invitation.bienId,
+      // Déléguer la création du contrat à la Cloud Function (server-side)
+      debugPrint('🔧 Delegating contract creation to server function for bien ${invitation.bienId}');
+      try {
+        final payload = {
+          'token': token,
           'locataireId': locataireId,
-          'proprietaireId': invitation.proprietaireId,
-          'dateDebut': DateTime.now().toIso8601String(),
-          'dateFin': null,
-          'loyerMensuel': invitation.loyerMensuel,
-          'charges': invitation.charges ?? 0,
-          'caution': 0,
-          'jourPaiement': 1,
-          'statut': 'actif',
-          'documentUrl': null,
-          'notes': invitation.message,
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        },
-        permissions: [
-          Permission.read(Role.user(locataireId)),
-          Permission.read(Role.user(invitation.proprietaireId)),
-          Permission.update(Role.user(invitation.proprietaireId)),
-        ],
-      );
+        };
+        debugPrint('🔐 Requesting function ${Environment.createContractFunctionId} with payload: $payload');
+        final execResp = await _appwriteService.executeFunction(
+          functionId: Environment.createContractFunctionId,
+          payload: payload,
+        );
+        debugPrint('🔁 Function execution (acceptExistingAccount) resp: $execResp');
+        if (execResp['success'] != true) {
+          final err = execResp['error'] ?? execResp['message'] ?? 'Unknown function error';
+          throw Exception('Erreur serveur lors de la création du contrat: $err');
+        }
+      } catch (e) {
+        debugPrint('❌ Erreur fonction create-contract: $e');
+        rethrow;
+      }
 
       // Mettre à jour l'invitation et le bien
       await _appwriteService.updateDocument(
